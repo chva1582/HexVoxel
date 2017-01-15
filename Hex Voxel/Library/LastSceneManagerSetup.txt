@@ -1,0 +1,4 @@
+sceneSetups:
+- path: Assets/HexVoxel.unity
+  isLoaded: 1
+  isActive: 1
