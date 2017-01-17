@@ -296,7 +296,6 @@ namespace Voxel
                 }
             }
             //Square Builds
-
         }
 
 
@@ -318,7 +317,7 @@ namespace Voxel
                 else
                     vertFail.Add(i);
             }
-            
+            /*
             if(vertTemp.Count == 6)
             {
                 //Octahedron
@@ -344,32 +343,61 @@ namespace Voxel
                     }
                 }
             }
-            /*
-            if (vertTemp.Count == 5)
+            */
+            if (vertTemp.Count == 5 && vertFail[0] == 1)
             {
                 //Rectangular Prism
+                int vertFailOpposite = vertFail[0] % 2 == 0 ? vertFail[0] + 1 : vertFail[0] - 1;
                 for (int face = 0, faceIndex = 0; face < 4; face++)
                 {
                     int[] triTemp = { (face / 2) % 2 == 0 ? 0 : 1, face % 2 == 0 ? 4 : 5, (face / 4) % 2 == 0 ? 2 : 3 };
                     if (face == 1 || face == 2 || face == 4 || face == 7)
                         Array.Reverse(triTemp);
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1]] - tetraPoints[triTemp[0]], tetraPoints[triTemp[2]] - tetraPoints[triTemp[0]]);
-                    if (TriNormCheck(center, faceVec.normalized))
+                    int i = 0;
+                    print("Vert Fail: " + vertFail[0] + "  Vert Count: " + vertCount);
+                    foreach (int tri in triTemp)
                     {
-                        int i = 0;
-                        foreach (int tri in triTemp)
-                        {
-                            verts.Add(vertTemp[vertFail[0]<tri?tri-1:tri]);
-                            //print(vertCount + ", " + 3 * faceIndex + ", " + i);
-                            tris.Add(vertCount + 3 * faceIndex + i);
-                            normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
-                            i++;
-                        }
-                        faceIndex++;
+                        verts.Add(vertTemp[vertFail[0]<=tri?tri-1:tri]);
+                        tris.Add(vertCount + 3 * faceIndex + i);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        i++;
+                    }
+                    faceIndex++;
+                }
+                vertCount = verts.Count;
+                vertTemp.Remove(vertFail[0]%2==0?vertTemp[vertFailOpposite-1]:vertTemp[vertFailOpposite]);
+                if (vertFail[0] == 0 || vertFail[0] == 3 || vertFail[0] == 4)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i]);
+                        tris.Add(vertCount + i);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i==2?3:i]);
+                        tris.Add(vertCount + 5 - i);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i]);
+                        tris.Add(vertCount + 2 - i);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i == 2 ? 3 : i]);
+                        tris.Add(vertCount + 3 + i);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                     }
                 }
             }
-            */
+            /*
             if(vertTemp.Count == 4)
             {
                 
@@ -459,7 +487,7 @@ namespace Voxel
                         }
                     }
                 }
-                
+              
             }
             if(vertTemp.Count == 3)
             {
@@ -475,7 +503,7 @@ namespace Voxel
                         tris.Add(vertCount + 2 - i);
                 }
             }
-            
+            */
         }
 
         /// <summary>
