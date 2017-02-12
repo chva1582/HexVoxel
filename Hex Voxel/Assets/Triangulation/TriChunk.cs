@@ -10,104 +10,47 @@ namespace Voxel
 
     public class TriChunk : MonoBehaviour
     {
-        public static int chunkSize = 16;
-        public static int chunkHeight = 16;
+        #region Control Variables
+        public static int chunkSize = 6;
+        public static int chunkHeight = 2;
         public Vector2 posOffset = new Vector2();
         public TriWorld world;
         public GameObject dot;
         static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize - 1];
         float noiseScale = 0.06f;
         public float threshold = 0.7f;
+        public bool sixPointActive, sixFaceCancel;
+        public bool fivePointActive, fiveFaceCancel;
+        public bool fourHoriSquareActive, fourHoriFaceReverse;
+        public bool fourVertSquareActive, fourVertFaceReverse;
+        public bool fourTetraActive, fourTetraFaceCancel;
+        public bool threePointActive, threeFaceReverse;
+        public bool thirdDiagonalActive, thirdDiagonalFaceReverse;
+        public bool meshRecalculate;
+        #endregion
 
-        Vector3[] tetraPoints = { new Vector3(0, 0, 0), new Vector3(1.5f, 0, 1), new Vector3(0, 0, 2), new Vector3(1.5f, 0, -1), new Vector3(.5f, -1f / 3f, 1), new Vector3(1, 1f / 3f, 0)};
-        static int[] tetra1 = { 0, 1, 2, 5 };
-        static int[] tetra2 = { 0, 1, 2, 4 };
-        static int[] tetra3 = { 0, 2, 3, 5 };
-        static int[] tetra4 = { 0, 2, 3, 4 };
-        static int[][] tetras = { tetra1, tetra2, tetra3, tetra4 };
-
-
-        Dictionary<int, List<int>[]> tetraIDs = new Dictionary<int, List<int>[]>
-        {
-            {0, new List<int>[] { new List<int> { 1, 2, 3 }, new List<int> { 0, 3, 2 }, new List<int> { 0, 1, 3 }, new List<int> { 0, 2, 1 } } },
-            {1, new List<int>[] { new List<int> { 1, 3, 2 }, new List<int> { 0, 2, 3 }, new List<int> { 0, 3, 1 }, new List<int> { 0, 1, 2 } } },
-            {2, new List<int>[] { new List<int> { 1, 2, 3 }, new List<int> { 0, 3, 2 }, new List<int> { 0, 1, 3 }, new List<int> { 0, 2, 1 } } },
-            {3, new List<int>[] { new List<int> { 1, 3, 2 }, new List<int> { 0, 2, 3 }, new List<int> { 0, 3, 1 }, new List<int> { 0, 1, 2 } } }
-        };
-
+        #region Calculated Lists
         //Type used for face lookup
         class InnerFaceKey : IEquatable<InnerFaceKey>
         {
             int tetraID, failVert;
-            public InnerFaceKey(int ID, int fail) { tetraID = ID; failVert = fail;}
+            public InnerFaceKey(int ID, int fail) { tetraID = ID; failVert = fail; }
             public bool Equals(InnerFaceKey other) { return other.tetraID == tetraID && other.failVert == failVert; }
             public override int GetHashCode() { return tetraID.GetHashCode() ^ failVert.GetHashCode(); }
         }
-
-        //Holds the tris for inner faces
-        Dictionary<InnerFaceKey, List<int>> innerFaceIDs = new Dictionary<InnerFaceKey, List<int>>
-        {
-            {new InnerFaceKey(0, 0),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(0, 1),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(0, 2),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(0, 5),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(1, 0),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(1, 1),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(1, 2),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(1, 4),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(2, 0),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(2, 2),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(2, 3),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(2, 5),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(3, 0),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(3, 2),  new List<int> { 0, 2, 1 } },
-            {new InnerFaceKey(3, 3),  new List<int> { 0, 1, 2 } },
-            {new InnerFaceKey(3, 4),  new List<int> { 0, 2, 1 } }
-        };
-
+        //public static Vector3[] tetraPoints = { new Vector3(0, 0, 0), new Vector3(1.5f, 0, 1), new Vector3(0, 0, 2), new Vector3(1.5f, 0, -1), new Vector3(.5f, -1f / 3f, 1), new Vector3(1, 1f / 3f, 0)};
+        public static Vector3[] tetraPoints = { new Vector3(0, 0, 0), new Vector3(Mathf.Sqrt(3), 0, 1),
+            new Vector3(0, 0, 2), new Vector3(Mathf.Sqrt(3), 0, -1),
+            new Vector3(Mathf.Sqrt(3)-(2*Mathf.Sqrt(3) / 3), -2 * Mathf.Sqrt(1-Mathf.Sqrt(3)/3), 1),
+            new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
+#endregion
 
         void Start()
         {
             GenerateMesh(chunkSize);
         }
 
-        /// <summary>
-        /// Creates mesh
-        /// </summary>
-        /// <param name="wid">Width of points to be generated</param>
-        void GenerateMesh(int wid)
-        {
-            List<Vector3[]> verts = new List<Vector3[]>();
-            List<int> tris = new List<int>();
-
-            for (int z = 0; z < wid - 1; z++)
-            {
-                verts.Add(new Vector3[wid]);
-                for (int x = 0; x < wid; x++)
-                {
-                    Vector3 currentPoint = new Vector3(x + posOffset.x, 0, z + posOffset.y);
-
-                    int offset = z % 2;
-                    if (offset == 1)
-                        currentPoint.x -= 0.5f;
-
-                    float tempH = Mathf.Round(currentPoint.y);
-                    currentPoint.y += (2 * x + (offset == 1 ? 2 : 3)) % 3;
-                    currentPoint.y = (tempH - Mathf.Round(currentPoint.y))/3 + tempH;
-                    verts[z][x] = currentPoint;
-                }
-            }
-
-            Vector3[] uVerts = new Vector3[wid * (wid - 1)];
-            int i = 0;
-            foreach (Vector3[] v in verts)
-            {
-                v.CopyTo(uVerts, i * wid);
-                i++;
-            }
-            MeshFromPoints(uVerts);
-        }
-
+        #region On Draw
         /// <summary>
         /// Method called when object is selected
         /// </summary>
@@ -122,7 +65,7 @@ namespace Voxel
                         if (hits[i, j, k])
                         {
                             Vector3 vert = HexToPos(new WorldPos(i, j, k));
-                            vert = new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z);
+                            //vert = new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z);
                             Gizmos.color = Color.gray;
                             Gizmos.DrawSphere(vert, .2f);
                             if (world.show)
@@ -135,6 +78,45 @@ namespace Voxel
                     }
                 }
             }
+        }
+        #endregion
+
+        #region Face Construction
+        /// <summary>
+        /// Creates mesh
+        /// </summary>
+        /// <param name="wid">Width of points to be generated</param>
+        void GenerateMesh(int wid)
+        {
+            List<Vector3[]> verts = new List<Vector3[]>();
+
+            for (int z = 0; z < wid - 1; z++)
+            {
+                verts.Add(new Vector3[wid]);
+                for (int x = 0; x < wid; x++)
+                {
+                    Vector3 currentPoint = new Vector3(x + posOffset.x, 0, z + posOffset.y);
+
+                    int offset = z % 2;
+                    if (offset == 1)
+                        currentPoint.x -= (1-tetraPoints[4].x/tetraPoints[5].x);
+
+                    float tempH = Mathf.Round(currentPoint.y);
+                    currentPoint.y += (2 * x + (offset == 1 ? 2 : 3)) % 3;
+                    currentPoint.y = (tempH - Mathf.Round(currentPoint.y)) / 3 + tempH;
+                    currentPoint.y *= (tetraPoints[5].y)*3/2;
+                    verts[z][x] = currentPoint;
+                }
+            }
+
+            Vector3[] uVerts = new Vector3[wid * (wid - 1)];
+            int i = 0;
+            foreach (Vector3[] v in verts)
+            {
+                v.CopyTo(uVerts, i * wid);
+                i++;
+            }
+            MeshFromPoints(uVerts);
         }
 
         /// <summary>
@@ -152,14 +134,14 @@ namespace Voxel
             {
                 for (int y = 0; y < chunkHeight; y++)
                 {
-                    Vector3 center = new Vector3(basePoint.x, basePoint.y + y, basePoint.z);
+                    
+                    Vector3 center = new Vector3(basePoint.x, basePoint.y + y* (tetraPoints[5].y) * 3 / 2, basePoint.z);
                     if (Land(center) && GradientCheck(center))
                     {
-                        hits[PosToHex(center).x, PosToHex(center).y, PosToHex(center).z] = true;
+                        //hits[PosToHex(center).x, PosToHex(center).y, PosToHex(center).z] = true;
                         if (world.pointLoc)
                         {
-                            GameObject copy = Instantiate(dot, new Vector3(center.x * Mathf.Sqrt(3) / 1.5f, center.y * 2, center.z) , new Quaternion(0, 0, 0, 0)) as GameObject;
-                            copy.transform.parent = gameObject.transform;
+                            CreatePoint(center);
                         }
                     }
                 }
@@ -172,7 +154,7 @@ namespace Voxel
                 {
                     for (int z = 0; z < chunkSize - 1; z++)
                     {
-                        FaceBuilder(HexToPos(new WorldPos(x, y, z)), ref verts, ref tris, ref normals);
+                        //FaceBuilder(HexToPos(new WorldPos(x, y, z)), ref verts, ref tris, ref normals);
                     }
                 }
             }
@@ -184,33 +166,10 @@ namespace Voxel
             filter.mesh.triangles = tris.ToArray();
             filter.mesh.normals = normals.ToArray();
             filter.mesh.RecalculateBounds();
-            //filter.mesh.RecalculateNormals();
+            if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
         }
 
-        /// <summary>
-        /// Checks if a point is on the edge of a surface using IVT and gradients
-        /// </summary>
-        /// <param name="point">Point to check</param>
-        /// <returns>Boolean</returns>
-        bool GradientCheck(Vector3 point)
-        {
-            Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized * 2f;
-            if (GetNoise(point + normal, noiseScale) > threshold && GetNoise(point - normal, noiseScale) < threshold)
-                return true;
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if the point is within a solid
-        /// </summary>
-        /// <param name="point">Point to check</param>
-        /// <returns>Boolean</returns>
-        bool Land(Vector3 point)
-        {
-            //print(GetNoise(point, noiseScale));
-            return GetNoise(point, noiseScale) < threshold;
-        }
-
+        /*
         /// <summary>
         /// Constructs adjacent faces at a point. All faces are withing two adjacent tetrahedra
         /// </summary>
@@ -297,6 +256,7 @@ namespace Voxel
             }
             //Square Builds
         }
+        */
 
 
         void FaceBuilder(Vector3 center, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
@@ -311,14 +271,14 @@ namespace Voxel
                 Vector3 vert = center + tetraPoints[i];
                 if (CheckHit(vert))
                 {
-                    vertTemp.Add(new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z));
+                    vertTemp.Add(vert);// new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z));
                     vertSuccess.Add(i);
                 }
                 else
                     vertFail.Add(i);
             }
             
-            if(vertTemp.Count == 6)
+            if(vertTemp.Count == 6 && sixPointActive)
             {
                 //Octahedron
 
@@ -343,7 +303,7 @@ namespace Voxel
                 }
             }
             
-            if (vertTemp.Count == 5)
+            if (vertTemp.Count == 5 && fivePointActive)
             {
                 //Rectangular Prism
                 int vertFailOpposite = vertFail[0] % 2 == 0 ? vertFail[0] + 1 : vertFail[0] - 1;
@@ -413,7 +373,7 @@ namespace Voxel
             
             if(vertSuccess.Count == 4)
             {
-                if (vertFail[0] == 4 && vertFail[1] == 5)
+                if (vertFail[0] == 4 && vertFail[1] == 5 && fourHoriSquareActive)
                 {
                     //Horizontal Square
                     for (int i = 0; i < 3; i++)
@@ -428,7 +388,7 @@ namespace Voxel
                     }
                     for (int i = 0; i < 3; i++)
                     {
-                        int iTemp = i == 2 ? 3 : i;
+                        //int iTemp = i == 2 ? 3 : i;
                         verts.Add(vertTemp[i]);
                         normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                         Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[3] - tetraPoints[0]);
@@ -439,7 +399,7 @@ namespace Voxel
                     }
                     //Can't find Horizontal Square
                 }
-                else if(vertFail[0] == 2 && vertFail[1] == 3)
+                else if(vertFail[0] == 2 && vertFail[1] == 3 && fourVertSquareActive)
                 {
                     
                     //Point Slanted Square
@@ -466,7 +426,11 @@ namespace Voxel
                             tris.Add(vertCount + 5 - i);
                     }
                 }
-                else
+                else if(vertFail[0] == 0 && vertFail[1] == 1)
+                {
+                    print("Vert Part 2");
+                }
+                else if(fourTetraActive)
                 {
                     //Tetrahedron
                     int corner = vertSuccess[2];
@@ -496,7 +460,7 @@ namespace Voxel
               
             }
             
-            if(vertTemp.Count == 3)
+            if(vertTemp.Count == 3 && threePointActive)
             {
                 //Triangle
                 for (int i = 0; i < 3; i++)
@@ -521,7 +485,7 @@ namespace Voxel
                 }
             }   
             //Third Slant Face
-            if(CheckHit(center) && CheckHit(center + tetraPoints[1]) && CheckHit(center - tetraPoints[3] + tetraPoints[5]) && CheckHit(center + tetraPoints[2] + tetraPoints[5]))
+            if(CheckHit(center) && CheckHit(center + tetraPoints[1]) && CheckHit(center - tetraPoints[3] + tetraPoints[5]) && CheckHit(center + tetraPoints[2] + tetraPoints[5]) && thirdDiagonalActive)
             {
                 vertCount = verts.Count;
                 vertTemp.Clear();
@@ -538,6 +502,32 @@ namespace Voxel
                     normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                 }
             }
+        }
+        #endregion
+
+        #region Checks
+        /// <summary>
+        /// Checks if a point is on the edge of a surface using IVT and gradients
+        /// </summary>
+        /// <param name="point">Point to check</param>
+        /// <returns>Boolean</returns>
+        bool GradientCheck(Vector3 point)
+        {
+            Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized * 2f;
+            if (GetNoise(point + normal, noiseScale) > threshold && GetNoise(point - normal, noiseScale) < threshold)
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if the point is within a solid
+        /// </summary>
+        /// <param name="point">Point to check</param>
+        /// <returns>Boolean</returns>
+        bool Land(Vector3 point)
+        {
+            //print(GetNoise(point, noiseScale));
+            return GetNoise(point, noiseScale) < threshold;
         }
 
         /// <summary>
@@ -574,13 +564,15 @@ namespace Voxel
             catch { output = false; }
             return output;
         }
+        #endregion
 
+        #region Conversions
         /// <summary>
         /// Converts from World Position to Hex Coordinates
         /// </summary>
         /// <param name="point">World Position</param>
         /// <returns>Hex Coordinate</returns>
-        WorldPos PosToHex (Vector3 point)
+        public WorldPos PosToHex (Vector3 point)
         {
             WorldPos output = new WorldPos(Mathf.CeilToInt(point.x), Mathf.CeilToInt(point.y), (int)point.z);
             output.x -= (int)posOffset.x;
@@ -593,14 +585,75 @@ namespace Voxel
         /// </summary>
         /// <param name="point">Hex Coordinate</param>
         /// <returns>World Position</returns>
-        Vector3 HexToPos (WorldPos point)
+        public Vector3 HexToPos (WorldPos point)
         {
             point.x += (int)posOffset.x;
             point.z += (int)posOffset.y;
-            float x = point.z % 2 == 0 ? point.x : point.x - 0.5f;
+            float x = point.z % 2 == 0 ? point.x : point.x - Mathf.Sqrt(3);
             float y = point.y - Mathf.Abs((((point.x + Mathf.Abs(point.z % 2f) - (int)posOffset.x - 15)) % 3f) / 3f);
             Vector3 output = new Vector3(x,y,point.z);
             return output;
         }
+        #endregion
+
+        #region Debug
+        void CreatePoint(Vector3 location)
+        {
+            GameObject copy = Instantiate(dot, new Vector3(location.x * Mathf.Sqrt(3) / 1.5f, location.y * 2, location.z), new Quaternion(0, 0, 0, 0)) as GameObject;
+            copy.transform.parent = gameObject.transform;
+        }
+
+        public void FaceBuilderCheck(Vector3 center)
+        {
+            List<Vector3> vertTemp = new List<Vector3>();
+            List<int> vertFail = new List<int>();
+            List<int> vertSuccess = new List<int>();
+
+            for (int i = 0; i < 6; i++)
+            {
+                Vector3 vert = center + tetraPoints[i];
+                print(vert);
+                if (CheckHit(vert))
+                {
+                    vertTemp.Add(vert);//new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z));
+                    vertSuccess.Add(i);
+                }
+                else
+                    vertFail.Add(i);
+            }
+            print(vertTemp.Count);
+            switch (vertTemp.Count)
+            {
+                case 6:
+                    print(center + "= " + "Octahedron");
+                    break;
+
+                case 5:
+                    print(center + "= " + "Rectangular Prism");
+                    break;
+
+                case 4:
+                    if (vertFail[0] == 4 && vertFail[1] == 5)
+                        print(center + "= " + "Horizontal Square");
+                    else if (vertFail[0] == 2 && vertFail[1] == 3)
+                        print(center + "= " + "Vertical Square");
+                    else if (vertFail[0] == 0 && vertFail[1] == 1)
+                        print(center + "= " + "Vertical Square 2");
+                    else
+                        print(center + "= " + "Tetrahedron");
+                    break;
+
+                case 3:
+                    print(center + "= " + "Triangle");
+                    break;
+
+                default:
+                    break;
+            }
+
+            if (CheckHit(center) && CheckHit(center + tetraPoints[1]) && CheckHit(center - tetraPoints[3] + tetraPoints[5]) && CheckHit(center + tetraPoints[2] + tetraPoints[5]))
+                print(center + "= " + "Third Diagonal");
+        }
+        #endregion
     }
 }

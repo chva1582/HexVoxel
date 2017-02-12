@@ -24,5 +24,10 @@ namespace Voxel
                 }
             }
         }
+
+        public TriChunk GetChunk(Vector3 pos)
+        {
+            return GameObject.Find("TriChunk(Clone)").GetComponent<TriChunk>();
+        }
     }
 }
