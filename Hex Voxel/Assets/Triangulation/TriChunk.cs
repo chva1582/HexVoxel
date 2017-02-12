@@ -136,13 +136,12 @@ namespace Voxel
                 {
                     
                     Vector3 center = new Vector3(basePoint.x, basePoint.y + y* (tetraPoints[5].y) * 3 / 2, basePoint.z);
+                    CreatePoint(center);
                     if (Land(center) && GradientCheck(center))
                     {
                         //hits[PosToHex(center).x, PosToHex(center).y, PosToHex(center).z] = true;
-                        if (world.pointLoc)
-                        {
-                            CreatePoint(center);
-                        }
+                        //if (world.pointLoc)
+                            //CreatePoint(center);
                     }
                 }
             }
@@ -168,95 +167,6 @@ namespace Voxel
             filter.mesh.RecalculateBounds();
             if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
         }
-
-        /*
-        /// <summary>
-        /// Constructs adjacent faces at a point. All faces are withing two adjacent tetrahedra
-        /// </summary>
-        /// <param name="center"></param>
-        /// <param name="verts"></param>
-        /// <param name="tris"></param>
-        void TetraFaceBuilder(Vector3 center, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
-        {
-            //If point isn't existent
-            bool pullout = true;
-            bool[] checks = new bool[6];
-            
-            //List<Vector3> vertTemp = new List<Vector3>();
-            //Checks hits for each point
-            for (int index = 0; index < 6; index++)
-            {
-                if (CheckHit(center + tetraPoints[index]))
-                {
-                    checks[index] = true;
-                    pullout = false;
-                }
-                else
-                    checks[index] = false;
-                
-                Vector3 vert = center + tetraPoints[index];
-            }
-
-            if (pullout)
-                return;
-
-
-            //Checks individual tetrahedra
-            for (int tetra = 0; tetra < 4; tetra++)
-            {
-                int pointVertCount = verts.Count;
-                List<Vector3> vertTemp = new List<Vector3>();
-                int fail = -1;
-                //Checks at each point on the tetrahedron
-                for (int j = 0; j < 4; j++)
-                {
-                    if (checks[tetras[tetra][j]])
-                    {
-                        Vector3 vert = center + tetraPoints[tetras[tetra][j]];
-                        vertTemp.Add(new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z));
-                    }
-                    else
-                        fail = tetras[tetra][j];
-                }
-                //Full tetrahedron build
-                if (vertTemp.Count == 4)
-                {
-                    List<int>[] triTemp;
-                    tetraIDs.TryGetValue(tetra, out triTemp);
-                    for (int face = 0; face < 4; face++)
-                    {
-                        int tetraVertCount = verts.Count;
-                        if (!TriNormCheck(center, tetraPoints[tetras[tetra][face]]))
-                        {
-                            for (int i = 0; i < 3; i++)
-                            {
-                                verts.Add(vertTemp[triTemp[face][i]]);
-                                tris.Add(i + tetraVertCount);
-                                normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
-                            }
-                        }
-                    }
-                }
-                //Single face build
-                else if (vertTemp.Count == 3)
-                {
-                    foreach (var vert in vertTemp)
-                    {
-                        verts.Add(vert);
-                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
-                    }
-                    List<int> triTemp;
-                    if (!innerFaceIDs.TryGetValue(new InnerFaceKey(tetra, fail), out triTemp))
-                        print(tetra + ", " + fail);
-                    if(TriNormCheck(center, tetraPoints[fail]))
-                        for (int tri = 0; tri < 3; tri++) { tris.Add(triTemp.ToArray()[tri] + pointVertCount); }
-                    else
-                        for (int tri = 2; tri >= 0; tri--) { tris.Add(triTemp.ToArray()[tri] + pointVertCount); }
-                }
-            }
-            //Square Builds
-        }
-        */
 
 
         void FaceBuilder(Vector3 center, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
@@ -574,9 +484,13 @@ namespace Voxel
         /// <returns>Hex Coordinate</returns>
         public WorldPos PosToHex (Vector3 point)
         {
+            point.x -= posOffset.x;
+            point.z -= posOffset.y;
+            point.y /= tetraPoints[5].y;
+            point.x /= Mathf.Sqrt(3);
+            point.z /= 2;
             WorldPos output = new WorldPos(Mathf.CeilToInt(point.x), Mathf.CeilToInt(point.y), (int)point.z);
-            output.x -= (int)posOffset.x;
-            output.z -= (int)posOffset.y;
+            
             return output;
         }
 
@@ -589,8 +503,8 @@ namespace Voxel
         {
             point.x += (int)posOffset.x;
             point.z += (int)posOffset.y;
-            float x = point.z % 2 == 0 ? point.x : point.x - Mathf.Sqrt(3);
-            float y = point.y - Mathf.Abs((((point.x + Mathf.Abs(point.z % 2f) - (int)posOffset.x - 15)) % 3f) / 3f);
+            float x = point.z % 2 == 0 ? point.x : point.x - (1 - tetraPoints[4].x / tetraPoints[5].x);
+            float y = (point.y - Mathf.Abs((((point.x + Mathf.Abs(point.z % 2f) - (int)posOffset.x - 15)) % 3f) / 3f)) * (tetraPoints[5].y) * 3 / 2;
             Vector3 output = new Vector3(x,y,point.z);
             return output;
         }

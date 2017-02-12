@@ -26,7 +26,7 @@ namespace Voxel
                         Gizmos.DrawLine(pos + GetTetra(i), pos + GetTetra(j));
                 }
             }
-            world.GetChunk(pos).FaceBuilderCheck(pos);
+            //world.GetChunk(pos).FaceBuilderCheck(pos);
             WorldPos temp = world.GetChunk(pos).PosToHex(pos);
             print(temp.x + ", " + temp.y + ", " + temp.z);
         }
