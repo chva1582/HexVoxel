@@ -26,15 +26,15 @@ namespace Voxel
                         Gizmos.DrawLine(pos + GetTetra(i), pos + GetTetra(j));
                 }
             }
-            //world.GetChunk(pos).FaceBuilderCheck(pos);
+            world.GetChunk(pos).FaceBuilderCheck(pos);
             WorldPos temp = world.GetChunk(pos).PosToHex(pos);
-            print(temp.x + ", " + temp.y + ", " + temp.z);
+            //print(world.GetChunk(pos).HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
         }
 
         Vector3 GetTetra(int index)
         {
             Vector3 vert = TriChunk.tetraPoints[index];
-            return vert;// new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z);
+            return vert;
         }
     }
 }
