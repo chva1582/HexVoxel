@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using UnityEditor;
 using UnityEngine;
 
 namespace Voxel
@@ -16,6 +15,8 @@ namespace Voxel
 
         void OnDrawGizmosSelected()
         {
+            if (Selection.activeGameObject != transform.gameObject)
+                return;
             Gizmos.color = Color.green;
             Vector3 pos = transform.position;
             for (int i = 0; i < 6; i++)
@@ -28,7 +29,7 @@ namespace Voxel
             }
             world.GetChunk(pos).FaceBuilderCheck(pos);
             WorldPos temp = world.GetChunk(pos).PosToHex(pos);
-            //print(world.GetChunk(pos).HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
+            print(world.GetChunk(pos).HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
         }
 
         Vector3 GetTetra(int index)

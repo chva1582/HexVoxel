@@ -11,14 +11,15 @@ namespace Voxel
     public class TriChunk : MonoBehaviour
     {
         #region Control Variables
-        public static int chunkSize = 64;
+        public static int chunkSize = 16;
         public static int chunkHeight = 16;
         public Vector2 posOffset = new Vector2();
         public TriWorld world;
         public GameObject dot;
         static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
         float noiseScale = 0.06f;
-        public float threshold = 0.7f;
+        public float threshold = 10;
+        public float thresDropOff = .25f;
         public bool sixPointActive, sixFaceCancel;
         public bool fivePointActive, fiveFaceCancel;
         public bool fourHoriSquareActive, fourHoriFaceReverse;
@@ -48,6 +49,7 @@ namespace Voxel
         void Start()
         {
             GenerateMesh(chunkSize);
+            print(PosToHex(new Vector3(-8.6603f, 11.7021f, -1)).y);
         }
 
         #region On Draw
@@ -117,7 +119,6 @@ namespace Voxel
             }
             MeshFromPoints(uVerts);
         }
-
         /// <summary>
         /// Creates a mesh for the chunk based on a set of points it was handed
         /// </summary>
@@ -137,7 +138,6 @@ namespace Voxel
                     Vector3 center = new Vector3(basePoint.x, basePoint.y + y * (tetraPoints[5].y) * 3 / 2, basePoint.z);
                     if (Land(center) && GradientCheck(center))
                     {
-                        //hits[PosToHex(center).x, y, PosToHex(center).z] = true;
                         if (world.pointLoc)
                             CreatePoint(center);
                     }
@@ -165,8 +165,9 @@ namespace Voxel
             filter.mesh.RecalculateBounds();
             if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
         }
+        #endregion
 
-
+        #region Geometry
         void FaceBuilder(Vector3 center, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
         {
             List<Vector3> vertTemp = new List<Vector3>();
@@ -196,7 +197,7 @@ namespace Voxel
                     if (face == 1 || face == 2 || face == 4 || face == 7)
                         Array.Reverse(triTemp);
                     Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1]] - tetraPoints[triTemp[0]], tetraPoints[triTemp[2]] - tetraPoints[triTemp[0]]);
-                    if (TriNormCheck(center, faceVec.normalized))
+                    if (TriNormCheck(center, faceVec.normalized)||!sixFaceCancel)
                     {
                         int i = 0;
                         foreach (int tri in triTemp)
@@ -223,7 +224,7 @@ namespace Voxel
                         if (face == 0 || face == 3 || face == 5 || face == 6)
                             Array.Reverse(triTemp);
                         Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1]] - tetraPoints[triTemp[0]], tetraPoints[triTemp[2]] - tetraPoints[triTemp[0]]);
-                        if (TriNormCheck(center, faceVec.normalized))
+                        if (TriNormCheck(center, faceVec.normalized)||!fiveFaceCancel)
                         {
                             int i = 0;
                             foreach (int tri in triTemp)
@@ -242,7 +243,7 @@ namespace Voxel
                 if (vertFail[0] == 0 || vertFail[0] == 3 || vertFail[0] == 4)
                 {
                     Vector3 faceVec = tetraPoints[vertFail[0]];
-                    if (TriNormCheck(center, faceVec.normalized))
+                    if (TriNormCheck(center, faceVec.normalized) || !fiveFaceCancel)
                     {
                         for (int i = 0; i < 3; i++)
                         {
@@ -261,7 +262,7 @@ namespace Voxel
                 else
                 {
                     Vector3 faceVec = tetraPoints[vertFail[0]];
-                    if (TriNormCheck(center, faceVec.normalized))
+                    if (TriNormCheck(center, faceVec.normalized) || !fiveFaceCancel)
                     {
                         for (int i = 0; i < 3; i++)
                         {
@@ -304,6 +305,26 @@ namespace Voxel
                         else
                             tris.Add(vertCount + 5 - i);
                     }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i]);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                        if (!TriNormCheck(center, faceVec.normalized))
+                            tris.Add(vertCount + 6 + i);
+                        else
+                            tris.Add(vertCount + 8 - i);
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i == 2 ? 3 : i]);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                        if (TriNormCheck(center, faceVec.normalized))
+                            tris.Add(vertCount + 9 + i);
+                        else
+                            tris.Add(vertCount + 11 - i);
+                    }
                 }
                 else if(vertFail[0] == 2 && vertFail[1] == 3 && fourVertSquareActive)
                 {
@@ -331,6 +352,28 @@ namespace Voxel
                         else
                             tris.Add(vertCount + 5 - i);
                     }
+                    vertCount = verts.Count;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        verts.Add(vertTemp[i]);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[4] - tetraPoints[0]);
+                        if (!TriNormCheck(center, faceVec.normalized))
+                            tris.Add(vertCount + i);
+                        else
+                            tris.Add(vertCount + 2 - i);
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int iTemp = i == 2 ? 3 : i;
+                        verts.Add(vertTemp[iTemp]);
+                        normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[5] - tetraPoints[0]);
+                        if (!TriNormCheck(center, faceVec.normalized))
+                            tris.Add(vertCount + 3 + i);
+                        else
+                            tris.Add(vertCount + 5 - i);
+                    }
                 }
                 else if(vertFail[0] == 0 && vertFail[1] == 1)
                 {
@@ -340,8 +383,7 @@ namespace Voxel
                 {
                     int left = vertSuccess[1] - vertSuccess[0] == 2 ? 1 : 0;
                     int right = vertSuccess[1] - vertSuccess[0] == 2 ? 0 : 1;
-                    print(vertSuccess[0] + ", " + vertSuccess[1]);
-                    int[] triTemp = { left, right, 2, right, left, 3, left, 2, 3, right, 3, 2 };
+                    int[] triTemp = { left, right, 2, right, left, 3, right, left, 2, left, right, 3 };
                     for (int face = 0; face < 4; face++)
                     {
                         for (int j = 0; j < 3; j++)
@@ -351,19 +393,37 @@ namespace Voxel
                             normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                         }
                     }
-                    print("Corner Tetrahedron");
                 }
+                else if (vertFail[0] == 0 || vertFail[0] == 1)
+                {
+                    int[] triTemp = { 1, 2, 0, 1, 3, 2, 1, 0, 3, 2, 3, 0 };
+                    for (int face = 0; face < 4; face++)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            verts.Add(vertTemp[triTemp[3 * face + j]]);
+                            if(vertFail[0]+vertFail[1]==5)
+                                tris.Add(vertCount + 3 * face + 2 - j);
+                            else
+                                tris.Add(vertCount + 3 * face + j);
+                            normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                        }
+                    }
+                }
+
                 else if(fourTetraActive)
                 {
                     //Tetrahedron
                     int corner = vertSuccess[2];
                     int point = vertSuccess[3];
+                    
                     int[] triTemp = { 0, corner, 1, 0, 1, point, 0, point, corner, 1, corner, point};
+                    
                     int i = 0;
                     for (int face = 0; face < 4; face++)
                     {
                         Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1 + 3 * face]] - tetraPoints[triTemp[3 * face]], tetraPoints[triTemp[2 + 3 * face]] - tetraPoints[triTemp[3 * face]]);
-                        if (TriNormCheck(center, faceVec.normalized))
+                        if (TriNormCheck(center, faceVec.normalized)||!fourTetraFaceCancel)
                         {
                             for (int j = 0; j < 3; j++)
                             {
@@ -373,7 +433,10 @@ namespace Voxel
                                     verts.Add(vertTemp[3]);
                                 else
                                     verts.Add(vertTemp[triTemp[3 * face + j]]);
-                                tris.Add(vertCount + i);
+                                if (vertFail[0] + vertFail[1] == 7)
+                                    tris.Add(vertCount + i - j - j + 2);
+                                else
+                                    tris.Add(vertCount + i);
                                 normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                                 i++;
                             }
@@ -424,6 +487,12 @@ namespace Voxel
                     tris.Add(vertCount + i);
                     normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
                 }
+                for (int i = 0; i < 6; i++)
+                {
+                    verts.Add(vertTemp[5-i]);
+                    tris.Add(vertCount + 6 + i);
+                    normals.Add(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative.normalized);
+                }
             }
         }
         #endregion
@@ -437,7 +506,7 @@ namespace Voxel
         bool GradientCheck(Vector3 point)
         {
             Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized * 2f;
-            if (GetNoise(point + normal, noiseScale) > threshold - point.y * .25f && GetNoise(point - normal, noiseScale) < threshold - point.y * .25f)
+            if (GetNoise(point + normal, noiseScale) > threshold - point.y * thresDropOff && GetNoise(point - normal, noiseScale) < threshold - point.y * thresDropOff)
                 return true;
             return false;
         }
@@ -450,7 +519,7 @@ namespace Voxel
         bool Land(Vector3 point)
         {
             //print(GetNoise(point, noiseScale));
-            return GetNoise(point, noiseScale) < threshold - point.y * .25f;
+            return GetNoise(point, noiseScale) < threshold - point.y * thresDropOff;
         }
 
         /// <summary>
@@ -497,7 +566,9 @@ namespace Voxel
         /// <returns>Hex Coordinate</returns>
         public WorldPos PosToHex (Vector3 point)
         {
-            
+#warning There are fudge factors at work in these conversions
+            point.y += .1f; 
+            point.x -= .1f;
             point.y /= tetraPoints[5].y*3;
             point.x /= 2 * Mathf.Sqrt(3) / 3;
             point.x -= posOffset.x;
@@ -546,16 +617,16 @@ namespace Voxel
             for (int i = 0; i < 6; i++)
             {
                 Vector3 vert = center + tetraPoints[i];
-                print(vert);
+                WorldPos hex = PosToHex(vert);
+                print(vert + ", " + hex.x + ", " + hex.y + ", " + hex.z + "(Check Point) " + i);
                 if (CheckHit(vert))
                 {
-                    vertTemp.Add(vert);//new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z));
+                    vertTemp.Add(vert);
                     vertSuccess.Add(i);
                 }
                 else
                     vertFail.Add(i);
             }
-            print(vertTemp.Count);
             switch (vertTemp.Count)
             {
                 case 6:
@@ -575,6 +646,8 @@ namespace Voxel
                         print(center + "= " + "Vertical Square 2");
                     else if (vertSuccess[2] == 4 && vertSuccess[3] == 5)
                         print(center + "= " + "Corner Tetrahedron");
+                    else if (vertFail[0] == 0 || vertFail[0] == 1)
+                        print(center + "= " + "New Tetrahedron");
                     else
                         print(center + "= " + "Tetrahedron");
                     break;
@@ -586,7 +659,6 @@ namespace Voxel
                 default:
                     break;
             }
-
             if (CheckHit(center) && CheckHit(center + tetraPoints[1]) && CheckHit(center - tetraPoints[3] + tetraPoints[5]) && CheckHit(center + tetraPoints[2] + tetraPoints[5]))
                 print(center + "= " + "Third Diagonal");
         }
