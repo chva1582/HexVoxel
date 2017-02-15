@@ -11,9 +11,13 @@ namespace Voxel
     public class TriChunk : MonoBehaviour
     {
         #region Control Variables
-        public static int chunkSize = 16;
+        WorldPos chunkCoords;
+        public bool update;
+        public bool rendered;
+
+        public static int chunkSize = 64;
         public static int chunkHeight = 16;
-        public Vector2 posOffset = new Vector2();
+        public Vector3 posOffset = new Vector3();
         public TriWorld world;
         public GameObject dot;
         static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
@@ -49,7 +53,6 @@ namespace Voxel
         void Start()
         {
             GenerateMesh(chunkSize);
-            print(PosToHex(new Vector3(-8.6603f, 11.7021f, -1)).y);
         }
 
         #region On Draw
@@ -96,7 +99,7 @@ namespace Voxel
                 verts.Add(new Vector3[wid]);
                 for (int x = 0; x < wid; x++)
                 {
-                    Vector3 currentPoint = new Vector3(x + posOffset.x, 0, z + posOffset.y);
+                    Vector3 currentPoint = new Vector3(x + posOffset.x, posOffset.y, z + posOffset.z);
 
                     int offset = z % 2;
                     if (offset == 1)
@@ -134,12 +137,10 @@ namespace Voxel
             {
                 for (int y = 0; y < chunkHeight; y++)
                 {
-                    
                     Vector3 center = new Vector3(basePoint.x, basePoint.y + y * (tetraPoints[5].y) * 3 / 2, basePoint.z);
                     if (Land(center) && GradientCheck(center))
                     {
-                        if (world.pointLoc)
-                            CreatePoint(center);
+                        CreatePoint(center);
                     }
                 }
             }
@@ -158,11 +159,15 @@ namespace Voxel
 
             //Mesh Procedure
             MeshFilter filter = gameObject.GetComponent<MeshFilter>();
-            filter.mesh.Clear();
-            filter.mesh.vertices = verts.ToArray();
-            filter.mesh.triangles = tris.ToArray();
-            filter.mesh.normals = normals.ToArray();
-            filter.mesh.RecalculateBounds();
+            MeshCollider collider = gameObject.GetComponent<MeshCollider>();
+            Mesh mesh = new Mesh();
+            mesh.Clear();
+            mesh.vertices = verts.ToArray();
+            mesh.triangles = tris.ToArray();
+            mesh.normals = normals.ToArray();
+            mesh.RecalculateBounds();
+            filter.mesh = mesh;
+            collider.sharedMesh = mesh;
             if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
         }
         #endregion
@@ -497,6 +502,14 @@ namespace Voxel
         }
         #endregion
 
+        #region Update Mechanisms
+        public bool UpdateChunk()
+        {
+            rendered = true;
+            return true;
+        }
+        #endregion
+
         #region Checks
         /// <summary>
         /// Checks if a point is on the edge of a surface using IVT and gradients
@@ -572,7 +585,8 @@ namespace Voxel
             point.y /= tetraPoints[5].y*3;
             point.x /= 2 * Mathf.Sqrt(3) / 3;
             point.x -= posOffset.x;
-            point.z -= posOffset.y;
+            point.y -= posOffset.y;
+            point.z -= posOffset.z;
             WorldPos output = new WorldPos(Mathf.CeilToInt(point.x), Mathf.CeilToInt(point.y), (int)point.z);
             
             return output;
@@ -585,7 +599,7 @@ namespace Voxel
         /// <returns>World Position</returns>
         public Vector3 HexToPos (WorldPos point)
         {
-            Vector3 currentPoint = new Vector3(point.x + posOffset.x, 0, point.z + posOffset.y);
+            Vector3 currentPoint = new Vector3(point.x + posOffset.x, posOffset.y, point.z + posOffset.z);
             int offset = point.z % 2;
             if (offset == 1)
                 currentPoint.x -= (1 - tetraPoints[4].x / tetraPoints[5].x);
@@ -603,9 +617,12 @@ namespace Voxel
         void CreatePoint(Vector3 location)
         {
             Vector3 warpedLocation = new Vector3(location.x * Mathf.Sqrt(3) / 1.5f, location.y * 2, location.z);
-            GameObject copy = Instantiate(dot, warpedLocation, new Quaternion(0, 0, 0, 0)) as GameObject;
             hits[PosToHex(warpedLocation).x, PosToHex(warpedLocation).y, PosToHex(warpedLocation).z] = true;
-            copy.transform.parent = gameObject.transform;
+            if (world.pointLoc)
+            {
+                GameObject copy = Instantiate(dot, warpedLocation, new Quaternion(0, 0, 0, 0)) as GameObject;
+                copy.transform.parent = gameObject.transform;
+            }
         }
 
         public void FaceBuilderCheck(Vector3 center)
