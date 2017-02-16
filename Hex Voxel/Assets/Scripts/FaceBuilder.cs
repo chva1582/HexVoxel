@@ -6,18 +6,16 @@ using UnityEngine;
 public class FaceBuilder
 {
     //Geometric Booleans
-    public static bool sixPointActive, sixFaceCancel;
-    public static bool fivePointActive, fiveFaceCancel;
-    public static bool fourHoriSquareActive, fourHoriFaceReverse;
-    public static bool fourVertSquareActive, fourVertFaceReverse;
-    public static bool fourTetraActive, fourTetraFaceCancel;
-    public static bool threePointActive, threeFaceReverse;
+    public static bool sixPointActive = true, sixFaceCancel;
+    public static bool fivePointActive = true, fiveFaceCancel;
+    public static bool fourHoriSquareActive = true, fourHoriFaceReverse;
+    public static bool fourVertSquareActive = true, fourVertFaceReverse;
+    public static bool fourTetraActive = true, fourTetraFaceCancel;
+    public static bool threePointActive =true, threeFaceReverse;
     public static bool thirdDiagonalActive, thirdDiagonalFaceReverse;
-    
-    public static Vector3[] tetraPoints = { new Vector3(0, 0, 0), new Vector3(Mathf.Sqrt(3), 0, 1),
-        new Vector3(0, 0, 2), new Vector3(Mathf.Sqrt(3), 0, -1),
-        new Vector3(Mathf.Sqrt(3)-(2*Mathf.Sqrt(3) / 3), -2 * Mathf.Sqrt(1-Mathf.Sqrt(3)/3), 1),
-        new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
+
+    public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1),
+        new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
 
     public static void Build(Vector3 center, Chunk chunk, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
     {
@@ -28,7 +26,7 @@ public class FaceBuilder
 
         for (int i = 0; i < 6; i++)
         {
-            Vector3 vert = center + tetraPoints[i];
+            Vector3 vert = center + hexPoints[i];
             if (chunk.CheckHit(vert))
             {
                 vertTemp.Add(vert);
@@ -47,7 +45,7 @@ public class FaceBuilder
                 int[] triTemp = { (face / 2) % 2 == 0 ? 0 : 1, face % 2 == 0 ? 4 : 5, (face / 4) % 2 == 0 ? 2 : 3 };
                 if (face == 1 || face == 2 || face == 4 || face == 7)
                     Array.Reverse(triTemp);
-                Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1]] - tetraPoints[triTemp[0]], tetraPoints[triTemp[2]] - tetraPoints[triTemp[0]]);
+                Vector3 faceVec = Vector3.Cross(hexPoints[triTemp[1]] - hexPoints[triTemp[0]], hexPoints[triTemp[2]] - hexPoints[triTemp[0]]);
                 if (chunk.TriNormCheck(center, faceVec.normalized) || !sixFaceCancel)
                 {
                     int i = 0;
@@ -55,7 +53,7 @@ public class FaceBuilder
                     {
                         verts.Add(vertTemp[tri]);
                         tris.Add(vertCount + 3 * faceIndex + i);
-                        Chunk.GetNormal(center);
+                        normals.Add(Chunk.GetNormal(center));
                         i++;
                     }
                     faceIndex++;
@@ -74,7 +72,7 @@ public class FaceBuilder
                 {
                     if (face == 0 || face == 3 || face == 5 || face == 6)
                         Array.Reverse(triTemp);
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1]] - tetraPoints[triTemp[0]], tetraPoints[triTemp[2]] - tetraPoints[triTemp[0]]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[triTemp[1]] - hexPoints[triTemp[0]], hexPoints[triTemp[2]] - hexPoints[triTemp[0]]);
                     if (chunk.TriNormCheck(center, faceVec.normalized) || !fiveFaceCancel)
                     {
                         int i = 0;
@@ -93,7 +91,7 @@ public class FaceBuilder
             vertTemp.Remove(vertFail[0] % 2 == 0 ? vertTemp[vertFailOpposite - 1] : vertTemp[vertFailOpposite]);
             if (vertFail[0] == 0 || vertFail[0] == 3 || vertFail[0] == 4)
             {
-                Vector3 faceVec = tetraPoints[vertFail[0]];
+                Vector3 faceVec = hexPoints[vertFail[0]];
                 if (chunk.TriNormCheck(center, faceVec.normalized) || !fiveFaceCancel)
                 {
                     for (int i = 0; i < 3; i++)
@@ -112,7 +110,7 @@ public class FaceBuilder
             }
             else
             {
-                Vector3 faceVec = tetraPoints[vertFail[0]];
+                Vector3 faceVec = hexPoints[vertFail[0]];
                 if (chunk.TriNormCheck(center, faceVec.normalized) || !fiveFaceCancel)
                 {
                     for (int i = 0; i < 3; i++)
@@ -140,7 +138,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[2] - hexPoints[0]);
                     if (chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + i);
                     else
@@ -150,7 +148,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i == 2 ? 3 : i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[2] - hexPoints[0]);
                     if (!chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + 3 + i);
                     else
@@ -160,7 +158,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[2] - hexPoints[0]);
                     if (!chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + 6 + i);
                     else
@@ -170,7 +168,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i == 2 ? 3 : i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[2] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[2] - hexPoints[0]);
                     if (chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + 9 + i);
                     else
@@ -186,7 +184,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[4] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[4] - hexPoints[0]);
                     if (chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + i);
                     else
@@ -197,7 +195,7 @@ public class FaceBuilder
                     int iTemp = i == 2 ? 3 : i;
                     verts.Add(vertTemp[iTemp]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[5] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[5] - hexPoints[0]);
                     if (chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + 3 + i);
                     else
@@ -208,7 +206,7 @@ public class FaceBuilder
                 {
                     verts.Add(vertTemp[i]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[4] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[4] - hexPoints[0]);
                     if (!chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + i);
                     else
@@ -219,7 +217,7 @@ public class FaceBuilder
                     int iTemp = i == 2 ? 3 : i;
                     verts.Add(vertTemp[iTemp]);
                     normals.Add(Chunk.GetNormal(center));
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[1] - tetraPoints[0], tetraPoints[5] - tetraPoints[0]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[1] - hexPoints[0], hexPoints[5] - hexPoints[0]);
                     if (!chunk.TriNormCheck(center, faceVec.normalized))
                         tris.Add(vertCount + 3 + i);
                     else
@@ -273,7 +271,7 @@ public class FaceBuilder
                 int i = 0;
                 for (int face = 0; face < 4; face++)
                 {
-                    Vector3 faceVec = Vector3.Cross(tetraPoints[triTemp[1 + 3 * face]] - tetraPoints[triTemp[3 * face]], tetraPoints[triTemp[2 + 3 * face]] - tetraPoints[triTemp[3 * face]]);
+                    Vector3 faceVec = Vector3.Cross(hexPoints[triTemp[1 + 3 * face]] - hexPoints[triTemp[3 * face]], hexPoints[triTemp[2 + 3 * face]] - hexPoints[triTemp[3 * face]]);
                     if (chunk.TriNormCheck(center, faceVec.normalized) || !fourTetraFaceCancel)
                     {
                         for (int j = 0; j < 3; j++)
@@ -304,7 +302,7 @@ public class FaceBuilder
             {
                 verts.Add(vertTemp[i]);
                 normals.Add(Chunk.GetNormal(center));
-                Vector3 faceVec = Vector3.Cross(tetraPoints[vertSuccess[1]] - tetraPoints[vertSuccess[0]], tetraPoints[vertSuccess[2]] - tetraPoints[vertSuccess[0]]);
+                Vector3 faceVec = Vector3.Cross(hexPoints[vertSuccess[1]] - hexPoints[vertSuccess[0]], hexPoints[vertSuccess[2]] - hexPoints[vertSuccess[0]]);
                 if (chunk.TriNormCheck(center, faceVec.normalized))
                     tris.Add(vertCount + i);
                 else
@@ -314,7 +312,7 @@ public class FaceBuilder
             {
                 verts.Add(vertTemp[i]);
                 normals.Add(Chunk.GetNormal(center));
-                Vector3 faceVec = Vector3.Cross(tetraPoints[vertSuccess[1]] - tetraPoints[vertSuccess[0]], tetraPoints[vertSuccess[2]] - tetraPoints[vertSuccess[0]]);
+                Vector3 faceVec = Vector3.Cross(hexPoints[vertSuccess[1]] - hexPoints[vertSuccess[0]], hexPoints[vertSuccess[2]] - hexPoints[vertSuccess[0]]);
                 if (!chunk.TriNormCheck(center, faceVec.normalized))
                     tris.Add(vertCount + 3 + i);
                 else
@@ -322,16 +320,16 @@ public class FaceBuilder
             }
         }
         //Third Slant Face
-        if (chunk.CheckHit(center) && chunk.CheckHit(center + tetraPoints[1]) && chunk.CheckHit(center - tetraPoints[3] + tetraPoints[5]) && chunk.CheckHit(center + tetraPoints[2] + tetraPoints[5]) && thirdDiagonalActive)
+        if (chunk.CheckHit(center) && chunk.CheckHit(center + hexPoints[1]) && chunk.CheckHit(center - hexPoints[3] + hexPoints[5]) && chunk.CheckHit(center + hexPoints[2] + hexPoints[5]) && thirdDiagonalActive)
         {
             vertCount = verts.Count;
             vertTemp.Clear();
             vertTemp.Add(center);
-            vertTemp.Add(center - tetraPoints[3] + tetraPoints[5]);
-            vertTemp.Add(center + tetraPoints[2] + tetraPoints[5]);
+            vertTemp.Add(center - hexPoints[3] + hexPoints[5]);
+            vertTemp.Add(center + hexPoints[2] + hexPoints[5]);
             vertTemp.Add(center);
-            vertTemp.Add(center + tetraPoints[2] + tetraPoints[5]);
-            vertTemp.Add(center + tetraPoints[1]);
+            vertTemp.Add(center + hexPoints[2] + hexPoints[5]);
+            vertTemp.Add(center + hexPoints[1]);
             for (int i = 0; i < 6; i++)
             {
                 verts.Add(vertTemp[i]);

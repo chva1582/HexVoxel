@@ -15,8 +15,8 @@ public class Chunk : MonoBehaviour
     public bool rendered;
 
     //Measurements
-    public static int chunkSize = 64;
-    public static int chunkHeight = 16;
+    public static int chunkSize = 4;
+    public static int chunkHeight = 4;
 
     //Components
     public Vector3 posOffset = new Vector3();
@@ -42,11 +42,23 @@ public class Chunk : MonoBehaviour
         new Vector3(0, 0, 2), new Vector3(Mathf.Sqrt(3), 0, -1),
         new Vector3(Mathf.Sqrt(3)-(2*Mathf.Sqrt(3) / 3), -2 * Mathf.Sqrt(1-Mathf.Sqrt(3)/3), 1),
         new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
+
+    public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1), 
+        new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
+
+    static float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
+    static float g = (2f / 3f) * Mathf.Sqrt(3);
+    static float h = Mathf.Sqrt(3);
+
+    static Vector3[] p2H = { new Vector3(1f / h, ((-1f) * g) / (f * h), 0),
+        new Vector3(0, 1f / f, 0), new Vector3(1f / (2f * h), ((-1f) * g) / (f * h), 1f / 2f) };
+
+    static Vector3[] h2P = { new Vector3(h, g, 0), new Vector3(0, f, 0), new Vector3(-1, 0, 2) };
 #endregion
 
     void Start()
     {
-        GenerateMesh(chunkSize);
+        GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
     }
 
     #region On Draw
@@ -85,9 +97,41 @@ public class Chunk : MonoBehaviour
     /// Creates mesh
     /// </summary>
     /// <param name="wid">Width of points to be generated</param>
-    void GenerateMesh(int wid)
+    void GenerateMesh(Vector3 size)
     {
-        List<Vector3[]> verts = new List<Vector3[]>();
+        List<Vector3> verts = new List<Vector3>();
+        List<int> tris = new List<int>();
+        List<Vector3> normals = new List<Vector3>();
+
+        for (int i = 0; i < size.x; i++)
+        {
+            for (int j = 0; j < size.y; j++)
+            {
+                for (int k = 0; k < size.z; k++)
+                {
+                    Vector3 center = new Vector3(i, j, k);
+                    //if (Land(center) && GradientCheck(center))
+                        CreatePoint(center);
+                    FaceBuilder.Build(center, GetComponent<Chunk>(), ref verts, ref tris, ref normals);
+                }
+            }
+        }
+        //Mesh Procedure
+        MeshFilter filter = gameObject.GetComponent<MeshFilter>();
+        MeshCollider collider = gameObject.GetComponent<MeshCollider>();
+        Mesh mesh = new Mesh();
+        mesh.Clear();
+        List<Vector3> posVerts = new List<Vector3>();
+        foreach (Vector3 hex in verts)
+            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))));
+        mesh.vertices = posVerts.ToArray();
+        mesh.triangles = tris.ToArray();
+        mesh.normals = normals.ToArray();
+        mesh.RecalculateBounds();
+        filter.mesh = mesh;
+        collider.sharedMesh = mesh;
+        if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
+        /*
         for (int z = 0; z < wid; z++)
         {
             verts.Add(new Vector3[wid]);
@@ -97,12 +141,12 @@ public class Chunk : MonoBehaviour
 
                 int offset = z % 2;
                 if (offset == 1)
-                    currentPoint.x -= (1-tetraPoints[4].x/tetraPoints[5].x);
+                    currentPoint.x -= (1-hexPoints[4].x/hexPoints[5].x);
 
                 float tempH = Mathf.Round(currentPoint.y);
                 currentPoint.y += (2 * x + (offset == 1 ? 2 : 3)) % 3;
                 currentPoint.y = (tempH - Mathf.Round(currentPoint.y)) / 3 + tempH;
-                currentPoint.y *= (tetraPoints[5].y)*3/2;
+                currentPoint.y *= (hexPoints[5].y)*3/2;
                 verts[z][x] = currentPoint;
             }
         }
@@ -114,8 +158,10 @@ public class Chunk : MonoBehaviour
             v.CopyTo(uVerts, i * wid);
             i++;
         }
-        MeshFromPoints(uVerts);
+        */
     }
+   
+    /*
     /// <summary>
     /// Creates a mesh for the chunk based on a set of points it was handed
     /// </summary>
@@ -131,7 +177,7 @@ public class Chunk : MonoBehaviour
         {
             for (int y = 0; y < chunkHeight; y++)
             {
-                Vector3 center = new Vector3(basePoint.x, basePoint.y + y * (tetraPoints[5].y) * 3 / 2, basePoint.z);
+                Vector3 center = new Vector3(basePoint.x, basePoint.y + y * (hexPoints[5].y) * 3 / 2, basePoint.z);
                 if (Land(center) && GradientCheck(center))
                 {
                     CreatePoint(center);
@@ -164,6 +210,7 @@ public class Chunk : MonoBehaviour
         collider.sharedMesh = mesh;
         if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
     }
+    */
     #endregion
 
     #region Geometry
@@ -257,16 +304,10 @@ public class Chunk : MonoBehaviour
     /// <returns>Hex Coordinate</returns>
     public WorldPos PosToHex (Vector3 point)
     {
-#warning There are fudge factors at work in these conversions
-        point.y += .1f; 
-        point.x -= .1f;
-        point.y /= tetraPoints[5].y*3;
-        point.x /= 2 * Mathf.Sqrt(3) / 3;
-        point.x -= posOffset.x;
-        point.y -= posOffset.y;
-        point.z -= posOffset.z;
-        WorldPos output = new WorldPos(Mathf.CeilToInt(point.x), Mathf.CeilToInt(point.y), (int)point.z);
-            
+        WorldPos output = new WorldPos();
+        output.x = Mathf.RoundToInt(p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z);
+        output.y = Mathf.RoundToInt(p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z);
+        output.z = Mathf.RoundToInt(p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z);
         return output;
     }
 
@@ -277,24 +318,20 @@ public class Chunk : MonoBehaviour
     /// <returns>World Position</returns>
     public Vector3 HexToPos (WorldPos point)
     {
-        Vector3 currentPoint = new Vector3(point.x + posOffset.x, posOffset.y, point.z + posOffset.z);
-        int offset = point.z % 2;
-        if (offset == 1)
-            currentPoint.x -= (1 - tetraPoints[4].x / tetraPoints[5].x);
-
-        float tempH = Mathf.Round(currentPoint.y);
-        currentPoint.y += (2 * point.x + (offset == 1 ? 2 : 3)) % 3;
-        currentPoint.y = (tempH - Mathf.Round(currentPoint.y)) / 3 + tempH;
-        currentPoint.y *= (tetraPoints[5].y) * 3 / 2;
-        currentPoint.y += point.y * (tetraPoints[5].y) * 3 / 2;
-        return new Vector3(currentPoint.x * Mathf.Sqrt(3) / 1.5f, currentPoint.y * 2, currentPoint.z);
+        Vector3 output = new Vector3();
+        output.x = h2P[0].x * point.x + h2P[0].y * point.y + h2P[0].z * point.z;
+        output.y = h2P[1].x * point.x + h2P[1].y * point.y + h2P[1].z * point.z;
+        output.z = h2P[2].x * point.x + h2P[2].y * point.y + h2P[2].z * point.z;
+        return output;
     }
     #endregion
 
     #region Debug
     void CreatePoint(Vector3 location)
     {
-        Vector3 warpedLocation = new Vector3(location.x * Mathf.Sqrt(3) / 1.5f, location.y * 2, location.z);
+        WorldPos posLoc = new WorldPos(Mathf.RoundToInt(location.x), Mathf.RoundToInt(location.y), Mathf.RoundToInt(location.z));
+        Vector3 warpedLocation = HexToPos(posLoc);
+        hits[posLoc.x, posLoc.y, posLoc.z] = true;
         if (world.pointLoc)
         {
             GameObject copy = Instantiate(dot, warpedLocation, new Quaternion(0, 0, 0, 0)) as GameObject;
@@ -310,7 +347,7 @@ public class Chunk : MonoBehaviour
         print(vertSuccess.Count);
         for (int i = 0; i < 6; i++)
         {
-            Vector3 vert = center + tetraPoints[i];
+            Vector3 vert = center + hexPoints[i];
             WorldPos hex = PosToHex(vert);
             //print(vert + ", " + hex.x + ", " + hex.y + ", " + hex.z + "(Check Point) " + i);
             if (CheckHit(vert))
@@ -353,7 +390,7 @@ public class Chunk : MonoBehaviour
             default:
                 break;
         }
-        if (CheckHit(center) && CheckHit(center + tetraPoints[1]) && CheckHit(center - tetraPoints[3] + tetraPoints[5]) && CheckHit(center + tetraPoints[2] + tetraPoints[5]))
+        if (CheckHit(center) && CheckHit(center + hexPoints[1]) && CheckHit(center - hexPoints[3] + hexPoints[5]) && CheckHit(center + hexPoints[2] + hexPoints[5]))
             print(center + "= " + "Third Diagonal");
     }
     #endregion
