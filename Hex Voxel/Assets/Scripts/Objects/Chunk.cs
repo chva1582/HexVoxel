@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -10,27 +9,27 @@ public class Chunk : MonoBehaviour
 {
     #region Control Variables
     //General Info
-    WorldPos chunkCoords;
+    public WorldPos chunkCoords;
     public bool update;
     public bool rendered;
 
     //Measurements
-    public static int chunkSize = 4;
-    public static int chunkHeight = 4;
+    public static int chunkSize = 16;
+    public static int chunkHeight = 64;
 
     //Components
-    public Vector3 posOffset = new Vector3();
+    public Vector3 PosOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
     public World world;
     public GameObject dot;
 
     //Storage
+    bool pointsReady;
     static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
 
     //Noise Parameters
-    static float noiseScale = 0.06f;
-    public static float threshold = 14;
-    public static float thresDropOff = 0;
-
+    static float noiseScale = 0.12f;
+    public static float threshold = 50f;
+    public static float thresDropOff = 1f;
     
     //Other Options
     public bool meshRecalculate;
@@ -51,14 +50,15 @@ public class Chunk : MonoBehaviour
     static float h = Mathf.Sqrt(3);
 
     static Vector3[] p2H = { new Vector3(1f / h, ((-1f) * g) / (f * h), 0),
-        new Vector3(0, 1f / f, 0), new Vector3(1f / (2f * h), ((-1f) * g) / (f * h), 1f / 2f) };
+        new Vector3(0, 1f / f, 0), new Vector3(1f / (2f * h), ((-1f) * g) / (2f * f * h), 1f / 2f) };
 
     static Vector3[] h2P = { new Vector3(h, g, 0), new Vector3(0, f, 0), new Vector3(-1, 0, 2) };
-#endregion
+    #endregion
 
     void Start()
     {
         GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
+        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
     }
 
     #region On Draw
@@ -76,7 +76,6 @@ public class Chunk : MonoBehaviour
                     if (hits[i, j, k])
                     {
                         Vector3 vert = HexToPos(new WorldPos(i, j, k));
-                        //vert = new Vector3(vert.x * Mathf.Sqrt(3) / 1.5f, vert.y * 2, vert.z);
                         Gizmos.color = Color.gray;
                         Gizmos.DrawSphere(vert, .2f);
                         if (world.show)
@@ -110,8 +109,22 @@ public class Chunk : MonoBehaviour
                 for (int k = 0; k < size.z; k++)
                 {
                     Vector3 center = new Vector3(i, j, k);
-                    //if (Land(center) && GradientCheck(center))
+                    Vector3 shiftedCenter = center + PosOffset*2;
+                    if (Land(shiftedCenter) && GradientCheck(shiftedCenter))
+                    {
+                        hits[i, j, k] = true;
                         CreatePoint(center);
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < size.x; i++)
+        {
+            for (int j = 0; j < size.y; j++)
+            {
+                for (int k = 0; k < size.z; k++)
+                {
+                    Vector3 center = new Vector3(i, j, k);
                     FaceBuilder.Build(center, GetComponent<Chunk>(), ref verts, ref tris, ref normals);
                 }
             }
@@ -131,92 +144,6 @@ public class Chunk : MonoBehaviour
         filter.mesh = mesh;
         collider.sharedMesh = mesh;
         if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
-        /*
-        for (int z = 0; z < wid; z++)
-        {
-            verts.Add(new Vector3[wid]);
-            for (int x = 0; x < wid; x++)
-            {
-                Vector3 currentPoint = new Vector3(x + posOffset.x, posOffset.y, z + posOffset.z);
-
-                int offset = z % 2;
-                if (offset == 1)
-                    currentPoint.x -= (1-hexPoints[4].x/hexPoints[5].x);
-
-                float tempH = Mathf.Round(currentPoint.y);
-                currentPoint.y += (2 * x + (offset == 1 ? 2 : 3)) % 3;
-                currentPoint.y = (tempH - Mathf.Round(currentPoint.y)) / 3 + tempH;
-                currentPoint.y *= (hexPoints[5].y)*3/2;
-                verts[z][x] = currentPoint;
-            }
-        }
-
-        Vector3[] uVerts = new Vector3[wid * wid];
-        int i = 0;
-        foreach (Vector3[] v in verts)
-        {
-            v.CopyTo(uVerts, i * wid);
-            i++;
-        }
-        */
-    }
-   
-    /*
-    /// <summary>
-    /// Creates a mesh for the chunk based on a set of points it was handed
-    /// </summary>
-    /// <param name="basePoints">Points to check</param>
-    public void MeshFromPoints(Vector3[] basePoints)
-    {
-        List<Vector3> verts = new List<Vector3>();
-        List<int> tris = new List<int>();
-        List<Vector3> normals = new List<Vector3>();
-
-        //Point Reading
-        foreach (var basePoint in basePoints)
-        {
-            for (int y = 0; y < chunkHeight; y++)
-            {
-                Vector3 center = new Vector3(basePoint.x, basePoint.y + y * (hexPoints[5].y) * 3 / 2, basePoint.z);
-                if (Land(center) && GradientCheck(center))
-                {
-                    CreatePoint(center);
-                }
-            }
-        }
-
-        //Face Construction
-        for (int x = 0; x < chunkSize; x++)
-        {
-            for (int y = 0; y < chunkHeight; y++)
-            {
-                for (int z = 0; z < chunkSize; z++)
-                {
-                    FaceBuilder.Build(HexToPos(new WorldPos(x, y, z)), GetComponent<Chunk>(), ref verts, ref tris, ref normals);
-                }
-            }
-        }
-
-        //Mesh Procedure
-        MeshFilter filter = gameObject.GetComponent<MeshFilter>();
-        MeshCollider collider = gameObject.GetComponent<MeshCollider>();
-        Mesh mesh = new Mesh();
-        mesh.Clear();
-        mesh.vertices = verts.ToArray();
-        mesh.triangles = tris.ToArray();
-        mesh.normals = normals.ToArray();
-        mesh.RecalculateBounds();
-        filter.mesh = mesh;
-        collider.sharedMesh = mesh;
-        if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
-    }
-    */
-    #endregion
-
-    #region Geometry
-    void FaceBuilderMethod(Vector3 center, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
-    {
-        FaceBuilder.Build(center, GetComponent<Chunk>(), ref verts, ref tris, ref normals);
     }
     #endregion
 
@@ -237,8 +164,8 @@ public class Chunk : MonoBehaviour
     bool GradientCheck(Vector3 point)
     {
         Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized;
-        //normal = new Vector3(0, thresDropOff*20, 0);
-        normal = normal.normalized * 2f;
+        //normal += new Vector3(0, thresDropOff, 0);
+        normal = normal.normalized * 3f;
         if (GetNoise(point + normal, noiseScale) > threshold - point.y * thresDropOff && GetNoise(point - normal, noiseScale) < threshold - point.y * thresDropOff)
             return true;
         return false;
@@ -290,8 +217,8 @@ public class Chunk : MonoBehaviour
     public bool CheckHit(Vector3 point)
     {
         bool output;
-        try { output = hits[PosToHex(point).x, PosToHex(point).y, PosToHex(point).z]; }
-        catch { output = false; }
+        try { output = hits[Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z)]; }
+        catch { output = false;}
         return output;
     }
     #endregion
@@ -305,6 +232,9 @@ public class Chunk : MonoBehaviour
     public WorldPos PosToHex (Vector3 point)
     {
         WorldPos output = new WorldPos();
+        point.x -= PosOffset.x*2;
+        point.y -= PosOffset.y*2;
+        point.z -= PosOffset.z*2;
         output.x = Mathf.RoundToInt(p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z);
         output.y = Mathf.RoundToInt(p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z);
         output.z = Mathf.RoundToInt(p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z);
@@ -322,6 +252,9 @@ public class Chunk : MonoBehaviour
         output.x = h2P[0].x * point.x + h2P[0].y * point.y + h2P[0].z * point.z;
         output.y = h2P[1].x * point.x + h2P[1].y * point.y + h2P[1].z * point.z;
         output.z = h2P[2].x * point.x + h2P[2].y * point.y + h2P[2].z * point.z;
+        output.x += PosOffset.x*2;
+        output.y += PosOffset.y*2;
+        output.z += PosOffset.z*2;
         return output;
     }
     #endregion
@@ -331,7 +264,6 @@ public class Chunk : MonoBehaviour
     {
         WorldPos posLoc = new WorldPos(Mathf.RoundToInt(location.x), Mathf.RoundToInt(location.y), Mathf.RoundToInt(location.z));
         Vector3 warpedLocation = HexToPos(posLoc);
-        hits[posLoc.x, posLoc.y, posLoc.z] = true;
         if (world.pointLoc)
         {
             GameObject copy = Instantiate(dot, warpedLocation, new Quaternion(0, 0, 0, 0)) as GameObject;
@@ -348,8 +280,7 @@ public class Chunk : MonoBehaviour
         for (int i = 0; i < 6; i++)
         {
             Vector3 vert = center + hexPoints[i];
-            WorldPos hex = PosToHex(vert);
-            //print(vert + ", " + hex.x + ", " + hex.y + ", " + hex.z + "(Check Point) " + i);
+            print(vert + "(Check Point) " + i);
             if (CheckHit(vert))
             {
                 vertTemp.Add(vert);

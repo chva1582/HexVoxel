@@ -11,8 +11,8 @@ public class FaceBuilder
     public static bool fourHoriSquareActive = true, fourHoriFaceReverse;
     public static bool fourVertSquareActive = true, fourVertFaceReverse;
     public static bool fourTetraActive = true, fourTetraFaceCancel;
-    public static bool threePointActive =true, threeFaceReverse;
-    public static bool thirdDiagonalActive, thirdDiagonalFaceReverse;
+    public static bool threePointActive = true, threeFaceReverse;
+    public static bool thirdDiagonalActive = true, thirdDiagonalFaceReverse;
 
     public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1),
         new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
@@ -23,7 +23,6 @@ public class FaceBuilder
         List<int> vertFail = new List<int>();
         List<int> vertSuccess = new List<int>();
         int vertCount = verts.Count;
-
         for (int i = 0; i < 6; i++)
         {
             Vector3 vert = center + hexPoints[i];
@@ -35,7 +34,6 @@ public class FaceBuilder
             else
                 vertFail.Add(i);
         }
-
         if (vertTemp.Count == 6 && sixPointActive)
         {
             //Octahedron
