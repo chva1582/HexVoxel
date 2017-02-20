@@ -44,21 +44,13 @@ public class Chunk : MonoBehaviour
 
     public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1), 
         new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
-
-    static float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
-    static float g = (2f / 3f) * Mathf.Sqrt(3);
-    static float h = Mathf.Sqrt(3);
-
-    static Vector3[] p2H = { new Vector3(1f / h, ((-1f) * g) / (f * h), 0),
-        new Vector3(0, 1f / f, 0), new Vector3(1f / (2f * h), ((-1f) * g) / (2f * f * h), 1f / 2f) };
-
-    static Vector3[] h2P = { new Vector3(h, g, 0), new Vector3(0, f, 0), new Vector3(-1, 0, 2) };
     #endregion
 
     void Start()
     {
         GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+        print(PosOffset.ToString());
     }
 
     #region On Draw
@@ -166,7 +158,7 @@ public class Chunk : MonoBehaviour
         Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized + new Vector3(0, thresDropOff, 0);
         gradient = gradient.normalized;
         WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
-        if (!Land(PosToHexUncut(HexToPos(hexPos) + gradient)) && Land(PosToHexUncut(HexToPos(hexPos) - gradient)))
+        if (!Land(PosToHex(HexToPos(hexPos) + gradient)) && Land(PosToHex(HexToPos(hexPos) - gradient)))
             return true;
         return false;
     }
@@ -229,28 +221,12 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">World Position</param>
     /// <returns>Hex Coordinate</returns>
-    public WorldPos PosToHex (Vector3 point)
+    public Vector3 PosToHex (Vector3 point)
     {
-        WorldPos output = new WorldPos();
-        point.x -= PosOffset.x*2;
-        point.y -= PosOffset.y*2;
-        point.z -= PosOffset.z*2;
-        output.x = Mathf.RoundToInt(p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z);
-        output.y = Mathf.RoundToInt(p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z);
-        output.z = Mathf.RoundToInt(p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z);
-        return output;
-    }
-
-    public Vector3 PosToHexUncut (Vector3 point)
-    {
-        Vector3 output = new Vector3();
-        point.x -= PosOffset.x * 2;
-        point.y -= PosOffset.y * 2;
-        point.z -= PosOffset.z * 2;
-        output.x = p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z;
-        output.y = p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z;
-        output.z = p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z;
-        return output;
+        point.x -= PosOffset.x;
+        point.y -= PosOffset.y;
+        point.z -= PosOffset.z;
+        return world.PosToHex(point);
     }
 
     /// <summary>
@@ -261,12 +237,10 @@ public class Chunk : MonoBehaviour
     public Vector3 HexToPos (WorldPos point)
     {
         Vector3 output = new Vector3();
-        output.x = h2P[0].x * point.x + h2P[0].y * point.y + h2P[0].z * point.z;
-        output.y = h2P[1].x * point.x + h2P[1].y * point.y + h2P[1].z * point.z;
-        output.z = h2P[2].x * point.x + h2P[2].y * point.y + h2P[2].z * point.z;
-        output.x += PosOffset.x*2;
-        output.y += PosOffset.y*2;
-        output.z += PosOffset.z*2;
+        output = world.HexToPos(point.ToVector3());
+        output.x += PosOffset.x;
+        output.y += PosOffset.y;
+        output.z += PosOffset.z;
         return output;
     }
     #endregion

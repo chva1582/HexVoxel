@@ -28,25 +28,25 @@ public class PointData : MonoBehaviour
                         Gizmos.DrawLine(pos + GetTetra(i), pos + GetTetra(j));
                 }
             }
-            chunk.FaceBuilderCheck(chunk.PosToHex(pos).ToVector3());
+            chunk.FaceBuilderCheck(chunk.PosToHex(pos).ToWorldPos().ToVector3());
         }
         if(world.debugMode == DebugMode.Gradient)
         {
-            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](chunk.PosToHex(pos).ToVector3(), Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](chunk.PosToHex(pos).ToWorldPos().ToVector3(), Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
             gradient = gradient.normalized * 2;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos, pos + gradient);
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(pos, pos - gradient);
-            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos)) ? Color.red : Color.blue;
+            Gizmos.color = chunk.Land(chunk.PosToHex(pos)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos, .15f);
-            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos + gradient)) ? Color.red : Color.blue;
+            Gizmos.color = chunk.Land(chunk.PosToHex(pos + gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos + gradient, .05f);
-            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos - gradient)) ? Color.red : Color.blue;
+            Gizmos.color = chunk.Land(chunk.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
-            print(chunk.GradientCheck(chunk.PosToHexUncut(pos)));
+            print(chunk.GradientCheck(chunk.PosToHex(pos)));
         }
-        WorldPos temp = chunk.PosToHex(pos);
+        WorldPos temp = chunk.PosToHex(pos).ToWorldPos();
         //print(chunk.HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
     }
 
