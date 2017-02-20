@@ -44,6 +44,7 @@ public class PointData : MonoBehaviour
             Gizmos.DrawSphere(pos + gradient, .05f);
             Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
+            print(chunk.GradientCheck(chunk.PosToHexUncut(pos)));
         }
         WorldPos temp = chunk.PosToHex(pos);
         //print(chunk.HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);

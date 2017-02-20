@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 
 public enum DebugMode { None, Octahedron, Gradient }
+public enum PointMode { None, Gradient, All}
 
 public class World : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class World : MonoBehaviour
     public GameObject chunk;
 
     public DebugMode debugMode = DebugMode.None;
+    public PointMode pointMode;
 
     // Use this for initialization
     void Start()

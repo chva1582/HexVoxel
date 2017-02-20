@@ -14,7 +14,7 @@ public class Chunk : MonoBehaviour
     public bool rendered;
 
     //Measurements
-    public static int chunkSize = 16;
+    public static int chunkSize = 32;
     public static int chunkHeight = 64;
 
     //Components
@@ -27,8 +27,8 @@ public class Chunk : MonoBehaviour
     static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
 
     //Noise Parameters
-    public static float noiseScale = 0.12f;
-    public static float threshold = 50f;
+    public static float noiseScale = 0.04f;
+    public static float threshold = 30f;
     public static float thresDropOff = 1f;
     
     //Other Options
@@ -101,7 +101,6 @@ public class Chunk : MonoBehaviour
         List<Vector3> verts = new List<Vector3>();
         List<int> tris = new List<int>();
         List<Vector3> normals = new List<Vector3>();
-
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
@@ -113,8 +112,9 @@ public class Chunk : MonoBehaviour
                     if (GradientCheck(shiftedCenter)) //Land(shiftedCenter)
                     {
                         hits[i, j, k] = true;
-                        CreatePoint(center);
+                        if(world.pointMode == PointMode.Gradient) { CreatePoint(center); }
                     }
+                    if (world.pointMode == PointMode.All) { CreatePoint(center); }
                 }
             }
         }
@@ -161,13 +161,12 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">Point to check</param>
     /// <returns>Boolean</returns>
-    bool GradientCheck(Vector3 point)
+    public bool GradientCheck(Vector3 point)
     {
-        Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative;
-        normal += new Vector3(0, thresDropOff, 0);
-        normal = PosToHexUncut(normal);
-        normal = normal.normalized * 2;
-        if (GetNoise(point + normal, noiseScale) > threshold - point.y * thresDropOff && GetNoise(point - normal, noiseScale) < threshold - point.y * thresDropOff)
+        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized + new Vector3(0, thresDropOff, 0);
+        gradient = gradient.normalized;
+        WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
+        if (!Land(PosToHexUncut(HexToPos(hexPos) + gradient)) && Land(PosToHexUncut(HexToPos(hexPos) - gradient)))
             return true;
         return false;
     }
