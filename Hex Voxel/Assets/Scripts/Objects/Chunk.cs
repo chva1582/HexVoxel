@@ -27,7 +27,7 @@ public class Chunk : MonoBehaviour
     static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
 
     //Noise Parameters
-    static float noiseScale = 0.12f;
+    public static float noiseScale = 0.12f;
     public static float threshold = 50f;
     public static float thresDropOff = 1f;
     
@@ -110,7 +110,7 @@ public class Chunk : MonoBehaviour
                 {
                     Vector3 center = new Vector3(i, j, k);
                     Vector3 shiftedCenter = center + PosOffset*2;
-                    if (Land(shiftedCenter) && GradientCheck(shiftedCenter))
+                    if (GradientCheck(shiftedCenter)) //Land(shiftedCenter)
                     {
                         hits[i, j, k] = true;
                         CreatePoint(center);
@@ -163,9 +163,10 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     bool GradientCheck(Vector3 point)
     {
-        Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized;
-        //normal += new Vector3(0, thresDropOff, 0);
-        normal = normal.normalized * 3f;
+        Vector3 normal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative;
+        normal += new Vector3(0, thresDropOff, 0);
+        normal = PosToHexUncut(normal);
+        normal = normal.normalized * 2;
         if (GetNoise(point + normal, noiseScale) > threshold - point.y * thresDropOff && GetNoise(point - normal, noiseScale) < threshold - point.y * thresDropOff)
             return true;
         return false;
@@ -176,7 +177,7 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">Point to check</param>
     /// <returns>Boolean</returns>
-    bool Land(Vector3 point)
+    public bool Land(Vector3 point)
     {
         //print(GetNoise(point, noiseScale));
         return GetNoise(point, noiseScale) < threshold - point.y * thresDropOff;
@@ -238,6 +239,18 @@ public class Chunk : MonoBehaviour
         output.x = Mathf.RoundToInt(p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z);
         output.y = Mathf.RoundToInt(p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z);
         output.z = Mathf.RoundToInt(p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z);
+        return output;
+    }
+
+    public Vector3 PosToHexUncut (Vector3 point)
+    {
+        Vector3 output = new Vector3();
+        point.x -= PosOffset.x * 2;
+        point.y -= PosOffset.y * 2;
+        point.z -= PosOffset.z * 2;
+        output.x = p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z;
+        output.y = p2H[1].x * point.x + p2H[1].y * point.y + p2H[1].z * point.z;
+        output.z = p2H[2].x * point.x + p2H[2].y * point.y + p2H[2].z * point.z;
         return output;
     }
 

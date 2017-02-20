@@ -9,16 +9,17 @@ public class PointData : MonoBehaviour
     void Start()
     {
         world = GameObject.Find("World").GetComponent<World>();
+        chunk = world.GetChunk(transform.position);
     }
 
     void OnDrawGizmosSelected()
     {
         if (Selection.activeGameObject != transform.gameObject)
             return;
-        Gizmos.color = Color.green;
         Vector3 pos = transform.position;
         if (world.debugMode == DebugMode.Octahedron)
         {
+            Gizmos.color = Color.green;
             for (int i = 0; i < 6; i++)
             {
                 for (int j = 5; j > i; j--)
@@ -27,10 +28,25 @@ public class PointData : MonoBehaviour
                         Gizmos.DrawLine(pos + GetTetra(i), pos + GetTetra(j));
                 }
             }
+            chunk.FaceBuilderCheck(chunk.PosToHex(pos).ToVector3());
         }
-        world.GetChunk(pos).FaceBuilderCheck(world.GetChunk(pos).PosToHex(pos).ToVector3());
-        WorldPos temp = world.GetChunk(pos).PosToHex(pos);
-        //print(world.GetChunk(pos).HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
+        if(world.debugMode == DebugMode.Gradient)
+        {
+            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](chunk.PosToHex(pos).ToVector3(), Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
+            gradient = gradient.normalized * 2;
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(pos, pos + gradient);
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(pos, pos - gradient);
+            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos)) ? Color.red : Color.blue;
+            Gizmos.DrawSphere(pos, .15f);
+            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos + gradient)) ? Color.red : Color.blue;
+            Gizmos.DrawSphere(pos + gradient, .05f);
+            Gizmos.color = chunk.Land(chunk.PosToHexUncut(pos - gradient)) ? Color.red : Color.blue;
+            Gizmos.DrawSphere(pos - gradient, .05f);
+        }
+        WorldPos temp = chunk.PosToHex(pos);
+        //print(chunk.HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);
     }
 
     Vector3 GetTetra(int index)
