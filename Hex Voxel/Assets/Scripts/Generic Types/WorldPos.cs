@@ -41,4 +41,9 @@ public struct WorldPos
         output.z = z;
         return output;
     }
+
+    public override string ToString()
+    {
+        return "(" + x + ", " + y + ", " + z + ")";
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -14,11 +15,12 @@ public class Chunk : MonoBehaviour
     public bool rendered;
 
     //Measurements
-    public static int chunkSize = 32;
-    public static int chunkHeight = 64;
+    public static int chunkSize = 10;
+    public static int chunkHeight = 32;
 
     //Components
-    public Vector3 PosOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
+    public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
+    public Vector3 PosOffset { get { return world.HexToPos(new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize)); } }
     public World world;
     public GameObject dot;
 
@@ -50,7 +52,7 @@ public class Chunk : MonoBehaviour
     {
         GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
-        print(PosOffset.ToString());
+        Array.Clear(hits, 0, hits.Length);
     }
 
     #region On Draw
@@ -100,7 +102,7 @@ public class Chunk : MonoBehaviour
                 for (int k = 0; k < size.z; k++)
                 {
                     Vector3 center = new Vector3(i, j, k);
-                    Vector3 shiftedCenter = center + PosOffset*2;
+                    Vector3 shiftedCenter = center + HexOffset;
                     if (GradientCheck(shiftedCenter)) //Land(shiftedCenter)
                     {
                         hits[i, j, k] = true;
@@ -125,7 +127,6 @@ public class Chunk : MonoBehaviour
         MeshFilter filter = gameObject.GetComponent<MeshFilter>();
         MeshCollider collider = gameObject.GetComponent<MeshCollider>();
         Mesh mesh = new Mesh();
-        mesh.Clear();
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
             posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))));

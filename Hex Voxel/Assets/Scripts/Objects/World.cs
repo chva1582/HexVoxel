@@ -25,8 +25,16 @@ public class World : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        //CreateChunk(new WorldPos(0, 0, 1));
-        CreateChunk(new WorldPos(0, 0, 0));
+        for (int i = 0; i < 16; i++)
+        {
+            for (int j = 0; j < 1; j++)
+            {
+                for (int k = 0; k < 16; k++)
+                {
+                    CreateChunk(new WorldPos(i, j, k));
+                }
+            }
+        }        
     }
 
     void Update()
@@ -49,7 +57,8 @@ public class World : MonoBehaviour
     public Chunk GetChunk(Vector3 pos)
     {
         Vector3 coord = PosToHex(pos).ToWorldPos().ToVector3();
-        string objectName = "Chunk " + coord.ToString();
+        Vector3 chunkCoord = new Vector3((int)(coord.x / Chunk.chunkSize), (int)(coord.y / Chunk.chunkHeight), (int)(coord.z / Chunk.chunkSize));
+        string objectName = "Chunk " + chunkCoord.ToWorldPos().ToString();
         return GameObject.Find(objectName).GetComponent<Chunk>();
     }
 
