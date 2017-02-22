@@ -12,7 +12,7 @@ public class Chunk : MonoBehaviour
     //General Info
     public WorldPos chunkCoords;
     public bool update;
-    public bool rendered;
+    public bool rendered = true;
 
     //Measurements
     public static int chunkSize = 10;
