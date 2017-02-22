@@ -61,9 +61,12 @@ public class LoadChunks : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        FindChunksToLoad();
-        LoadAndRenderChunks();
-        DeleteChunks();
+        if (world.areaLoad)
+        {
+            FindChunksToLoad();
+            LoadAndRenderChunks();
+            DeleteChunks();
+        }
     }
 
     /// <summary>

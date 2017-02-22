@@ -16,7 +16,7 @@ public class Chunk : MonoBehaviour
 
     //Measurements
     public static int chunkSize = 10;
-    public static int chunkHeight = 32;
+    public static int chunkHeight = 10;
 
     //Components
     public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
@@ -152,7 +152,7 @@ public class Chunk : MonoBehaviour
     /// <summary>
     /// Checks if a point is on the edge of a surface using IVT and gradients
     /// </summary>
-    /// <param name="point">Point to check</param>
+    /// <param name="point">Hex point to check</param>
     /// <returns>Boolean</returns>
     public bool GradientCheck(Vector3 point)
     {
@@ -167,12 +167,12 @@ public class Chunk : MonoBehaviour
     /// <summary>
     /// Checks if the point is within a solid
     /// </summary>
-    /// <param name="point">Point to check</param>
+    /// <param name="point">hex point to check</param>
     /// <returns>Boolean</returns>
     public bool Land(Vector3 point)
     {
-        //print(GetNoise(point, noiseScale));
-        return GetNoise(point, noiseScale) < threshold - point.y * thresDropOff;
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).value * 20 + 10;
+        return noiseVal < threshold - point.y * thresDropOff;
     }
 
     /// <summary>
@@ -186,17 +186,6 @@ public class Chunk : MonoBehaviour
         return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative, normal);
     }
 
-    /// <summary>
-    /// Returns value of 3D noise at a point
-    /// </summary>
-    /// <param name="pos">Point to check</param>
-    /// <param name="scale">Size of the waves</param>
-    /// <returns>Value of the noise</returns>
-    public static float GetNoise(Vector3 pos, float scale)
-    {
-        return Procedural.Noise.noiseMethods[0][2](pos, scale).value * 20 + 10;
-    }
-
     public static Vector3 GetNormal(Vector3 pos)
     {
         return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative.normalized;
@@ -205,13 +194,16 @@ public class Chunk : MonoBehaviour
     /// <summary>
     /// Finds if this point is in the checks array
     /// </summary>
-    /// <param name="point">Point to check</param>
+    /// <param name="point">hex point to check</param>
     /// <returns>Boolean</returns>
     public bool CheckHit(Vector3 point)
     {
         bool output;
-        try { output = hits[Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z)]; }
-        catch { output = false;}
+        WorldPos checkChunk = world.PosToChunk(HexToPos(point.ToWorldPos()));
+        if (Equals(checkChunk, chunkCoords))
+            output = hits[Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z)];
+        else
+            output = world.CheckHit(HexToPos(point.ToWorldPos()));
         return output;
     }
     #endregion

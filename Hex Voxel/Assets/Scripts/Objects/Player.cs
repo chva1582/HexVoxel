@@ -9,6 +9,7 @@ public class Player : MonoBehaviour
     public float linearSpeed;
     public float jumpStrength;
     bool groundContact;
+    int timer;
 
 	// Use this for initialization
 	void Start () {
@@ -28,15 +29,19 @@ public class Player : MonoBehaviour
             body.AddForce(transform.forward * -1 * linearSpeed);
         if (Input.GetKeyDown(KeyCode.Space) && groundContact)
             body.AddForce(transform.up * jumpStrength);
+        if (timer == 100)
+            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        else if (timer < 100)
+            timer++;
     }
 
-    private void OnCollisionEnter(Collision collision)
+    void OnCollisionStay(Collision collision)
     {
         if (collision.gameObject.tag == "Ground")
             groundContact = true;
     }
 
-    private void OnCollisionExit(Collision collision)
+    void OnCollisionExit(Collision collision)
     {
         if (collision.gameObject.tag == "Ground")
             groundContact = false;

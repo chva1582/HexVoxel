@@ -8,6 +8,7 @@ public class World : MonoBehaviour
 {
     public bool pointLoc;
     public bool show;
+    public bool areaLoad;
     public float size;
     public GameObject chunk;
 
@@ -28,7 +29,7 @@ public class World : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        
+        //CreateChunk(new WorldPos(2, 0, 3));
     }
 
     void Update()
@@ -38,6 +39,8 @@ public class World : MonoBehaviour
             debugMode = debugMode != DebugMode.Octahedron ? DebugMode.Octahedron : DebugMode.None;
         if ((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && Input.GetKeyDown(KeyCode.G))
             debugMode = debugMode != DebugMode.Gradient ? DebugMode.Gradient : DebugMode.None;
+        if(Input.GetKeyDown(KeyCode.Return))
+            CreateChunk(new WorldPos(2, 0, -1));
     }
 
     /// <summary>
@@ -83,6 +86,43 @@ public class World : MonoBehaviour
         chunks.Remove(chunkCoord);
     }
 
+    /// <summary>
+    /// Finds if a point is active on a global scale
+    /// </summary>
+    /// <param name="pos">True position of test point</param>
+    /// <returns>Boolean</returns>
+    public bool CheckHit(Vector3 pos)
+    {
+        Vector3 hex = PosToHex(pos);
+        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex, Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
+        gradient = gradient.normalized;
+        if (!Land(PosToHex(HexToPos(hex) + gradient)) && Land(PosToHex(HexToPos(hex) - gradient)))
+            return true;
+        return false;
+    }
+
+    bool Land(Vector3 point)
+    {
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, Chunk.noiseScale).value * 20 + 10;
+        return noiseVal < Chunk.threshold - point.y * Chunk.thresDropOff;
+    }
+
+    /*
+    public bool CheckHit(Vector3 pos)
+    {
+
+        Chunk checkChunk = GetChunk(pos);
+        print(PosToChunk(pos));
+        if (checkChunk != null)
+        {
+            print(string.Empty);
+            return checkChunk.CheckHit(checkChunk.PosToHex(pos));
+        }
+        else
+            return false;
+    }
+    */
+
     public Vector3 HexToPos(Vector3 point)
     {
         Vector3 output;
@@ -105,9 +145,9 @@ public class World : MonoBehaviour
     {
         Vector3 hex = PosToHex(point);
         Vector3 output;
-        output.x = Mathf.FloorToInt(hex.x / Chunk.chunkSize);
-        output.y = Mathf.FloorToInt(hex.y / Chunk.chunkHeight);
-        output.z = Mathf.FloorToInt(hex.z / Chunk.chunkSize);
+        output.x = Mathf.FloorToInt((hex.x + .5f) / Chunk.chunkSize);
+        output.y = Mathf.FloorToInt((hex.y + .5f) / Chunk.chunkHeight);
+        output.z = Mathf.FloorToInt((hex.z + .5f) / Chunk.chunkSize);
         return output.ToWorldPos();
     }
 
