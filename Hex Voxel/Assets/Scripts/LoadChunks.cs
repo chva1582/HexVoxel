@@ -61,23 +61,23 @@ public class LoadChunks : MonoBehaviour
         world = GameObject.Find("World").GetComponent<World>();
         List<Vector3> chunkList = new List<Vector3>();
         /*
-        using (TextWriter tw = new StreamWriter("MediumRenderDistance.txt"))
+        using (TextWriter tw = new StreamWriter("LongRenderDistance.txt"))
         {
             Debug.Log(string.Empty);
-            for (int i = -10; i < 10; i++)
+            for (int i = -20; i < 20; i++)
             {
-                for (int j = -10; j < 10; j++)
+                for (int j = -20; j < 20; j++)
                 {
-                    for (int k = -10; k < 10; k++)
+                    for (int k = -20; k < 20; k++)
                     {
-                        if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 4096)
+                        if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 16384)
                             tw.WriteLine(i + " " + j + " " + k);
                     }
                 }
             }
         }*/
         List<WorldPos> closeChunkList = new List<WorldPos>();
-        using (StreamReader sr = File.OpenText("MediumRenderDistance.txt"))
+        using (StreamReader sr = File.OpenText("ShortRenderDistance.txt"))
         {
             string line;
             WorldPos closeChunkCoord;
@@ -167,7 +167,7 @@ public class LoadChunks : MonoBehaviour
             foreach (var chunk in world.chunks)
             {
                 float distance = Vector3.SqrMagnitude(transform.position - world.ChunkToPos(chunk.Value.chunkCoords));
-                if (distance > 8192)
+                if (distance > 32786)
                     chunksToDelete.Add(chunk.Key);
             }
             foreach (WorldPos chunk in chunksToDelete)

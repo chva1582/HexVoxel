@@ -131,7 +131,10 @@ public class Chunk : MonoBehaviour
         Mesh mesh = new Mesh();
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
-            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))));
+        {
+            Vector3 offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
+            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset);
+        }
         mesh.vertices = posVerts.ToArray();
         mesh.triangles = tris.ToArray();
         mesh.normals = normals.ToArray();
