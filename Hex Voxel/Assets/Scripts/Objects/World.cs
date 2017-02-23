@@ -29,7 +29,8 @@ public class World : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        //CreateChunk(new WorldPos(2, 0, 3));
+        if(!areaLoad)
+            CreateChunk(new WorldPos(1, -6, 3));
     }
 
     void Update()
@@ -94,8 +95,8 @@ public class World : MonoBehaviour
     public bool CheckHit(Vector3 pos)
     {
         Vector3 hex = PosToHex(pos);
-        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex, Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
-        gradient = gradient.normalized;
+        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex, Chunk.noiseScale).derivative + new Vector3(0, Chunk.thresDropOff, 0);
+        gradient = gradient.normalized * Chunk.sqrt3;
         if (!Land(PosToHex(HexToPos(hex) + gradient)) && Land(PosToHex(HexToPos(hex) - gradient)))
             return true;
         return false;

@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class LoadChunks : MonoBehaviour
@@ -8,15 +10,16 @@ public class LoadChunks : MonoBehaviour
 
     List<WorldPos> updateList = new List<WorldPos>();
     List<WorldPos> buildList = new List<WorldPos>();
+    ChunkDistanceList startDistance;
 
     int timer = 0;
 
-    static WorldPos[] chunkPositions = {   new WorldPos( 0, 0,  0), new WorldPos(-1, 0,  0), new WorldPos( 0, 0, -1), new WorldPos( 0, 0,  1), new WorldPos( 1, 0,  0),
+    static WorldPos[] chunkPositions;/*= {   new WorldPos( 0, 0,  0), new WorldPos(-1, 0,  0), new WorldPos( 0, 0, -1), new WorldPos( 0, 0,  1), new WorldPos( 1, 0,  0),
                             new WorldPos(-1, 0, -1), new WorldPos(-1, 0,  1), new WorldPos( 1, 0, -1), new WorldPos( 1, 0,  1), new WorldPos(-2, 0,  0),
                             new WorldPos( 0, 0, -2), new WorldPos( 0, 0,  2), new WorldPos( 2, 0,  0), new WorldPos(-2, 0, -1), new WorldPos(-2, 0,  1),
                             new WorldPos(-1, 0, -2), new WorldPos(-1, 0,  2), new WorldPos( 1, 0, -2), new WorldPos( 1, 0,  2), new WorldPos( 2, 0, -1),
                             new WorldPos( 2, 0,  1), new WorldPos(-2, 0, -2), new WorldPos(-2, 0,  2), new WorldPos( 2, 0, -2), new WorldPos( 2, 0,  2),
-                            new WorldPos(-3, 0,  0), new WorldPos( 0, 0, -3), new WorldPos( 0, 0,  3), new WorldPos( 3, 0,  0) };/*, new WorldPos(-3, 0, -1),
+                            new WorldPos(-3, 0,  0), new WorldPos( 0, 0, -3), new WorldPos( 0, 0,  3), new WorldPos( 3, 0,  0) }, new WorldPos(-3, 0, -1),
                             new WorldPos(-3, 0,  1), new WorldPos(-1, 0, -3), new WorldPos(-1, 0,  3), new WorldPos( 1, 0, -3), new WorldPos( 1, 0,  3),
                             new WorldPos( 3, 0, -1), new WorldPos( 3, 0,  1), new WorldPos(-3, 0, -2), new WorldPos(-3, 0,  2), new WorldPos(-2, 0, -3),
                             new WorldPos(-2, 0,  3), new WorldPos( 2, 0, -3), new WorldPos( 2, 0,  3), new WorldPos( 3, 0, -2), new WorldPos( 3, 0,  2),
@@ -56,6 +59,40 @@ public class LoadChunks : MonoBehaviour
     void Start()
     {
         world = GameObject.Find("World").GetComponent<World>();
+        List<Vector3> chunkList = new List<Vector3>();
+        /*
+        using (TextWriter tw = new StreamWriter("MediumRenderDistance.txt"))
+        {
+            Debug.Log(string.Empty);
+            for (int i = -10; i < 10; i++)
+            {
+                for (int j = -10; j < 10; j++)
+                {
+                    for (int k = -10; k < 10; k++)
+                    {
+                        if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 4096)
+                            tw.WriteLine(i + " " + j + " " + k);
+                    }
+                }
+            }
+        }*/
+        List<WorldPos> closeChunkList = new List<WorldPos>();
+        using (StreamReader sr = File.OpenText("MediumRenderDistance.txt"))
+        {
+            string line;
+            WorldPos closeChunkCoord;
+            // Read and display lines from the file until the end of 
+            // the file is reached.
+            while ((line = sr.ReadLine()) != null)
+            {
+                string[] coordinateString = line.Split(' ');
+                closeChunkCoord.x = int.Parse(coordinateString[0]);
+                closeChunkCoord.y = int.Parse(coordinateString[1]);
+                closeChunkCoord.z = int.Parse(coordinateString[2]);
+                closeChunkList.Add(closeChunkCoord);
+            }
+        }
+        chunkPositions = closeChunkList.ToArray();
     }
 
     // Update is called once per frame
@@ -67,6 +104,7 @@ public class LoadChunks : MonoBehaviour
             LoadAndRenderChunks();
             DeleteChunks();
         }
+
     }
 
     /// <summary>

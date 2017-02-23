@@ -32,8 +32,8 @@ public class PointData : MonoBehaviour
         }
         if(world.debugMode == DebugMode.Gradient)
         {
-            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos).ToWorldPos().ToVector3(), Chunk.noiseScale).derivative.normalized + new Vector3(0, Chunk.thresDropOff, 0);
-            gradient = gradient.normalized;
+            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative + new Vector3(0, Chunk.thresDropOff, 0);
+            gradient = gradient.normalized * Chunk.sqrt3;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos, pos + gradient);
             Gizmos.color = Color.blue;
@@ -44,7 +44,7 @@ public class PointData : MonoBehaviour
             Gizmos.DrawSphere(pos + gradient, .05f);
             Gizmos.color = chunk.Land(world.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
-            //print(chunk.GradientCheck(world.PosToHex(pos)));
+            //print(((Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative.normalized+new Vector3(0,Chunk.thresDropOff,0)).normalized*Mathf.Sqrt(3)).ToString());
         }
         WorldPos temp = chunk.PosToHex(pos).ToWorldPos();
         //print(chunk.HexToPos(temp) + ", " + temp.x + ", " + temp.y + ", " + temp.z);

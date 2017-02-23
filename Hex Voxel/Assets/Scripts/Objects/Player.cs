@@ -30,7 +30,10 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && groundContact)
             body.AddForce(transform.up * jumpStrength);
         if (timer == 100)
+        {
             body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            timer++;
+        }
         else if (timer < 100)
             timer++;
     }

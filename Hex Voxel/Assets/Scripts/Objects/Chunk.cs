@@ -15,8 +15,8 @@ public class Chunk : MonoBehaviour
     public bool rendered = true;
 
     //Measurements
-    public static int chunkSize = 10;
-    public static int chunkHeight = 10;
+    public static int chunkSize = 16;
+    public static int chunkHeight = 16;
 
     //Components
     public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
@@ -29,9 +29,9 @@ public class Chunk : MonoBehaviour
     static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
 
     //Noise Parameters
-    public static float noiseScale = 0.04f;
-    public static float threshold = 30f;
-    public static float thresDropOff = 1f;
+    public static float noiseScale = 0.01f;
+    public static float threshold = 0f;
+    public static float thresDropOff = .25f;
     
     //Other Options
     public bool meshRecalculate;
@@ -46,6 +46,8 @@ public class Chunk : MonoBehaviour
 
     public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1), 
         new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
+
+    public static float sqrt3 = Mathf.Sqrt(3);
     #endregion
 
     void Start()
@@ -156,8 +158,9 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool GradientCheck(Vector3 point)
     {
-        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative.normalized + new Vector3(0, thresDropOff, 0);
-        gradient = gradient.normalized;
+        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative + new Vector3(0, thresDropOff, 0);
+        gradient = gradient.normalized * sqrt3;
+        //print(gradient);
         WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
         if (!Land(PosToHex(HexToPos(hexPos) + gradient)) && Land(PosToHex(HexToPos(hexPos) - gradient)))
             return true;
