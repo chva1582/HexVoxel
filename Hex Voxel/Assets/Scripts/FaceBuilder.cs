@@ -19,6 +19,7 @@ public class FaceBuilder
 
     public static void Build(Vector3 center, Chunk chunk, ref List<Vector3> verts, ref List<int> tris, ref List<Vector3> normals)
     {
+        float startTime = Time.realtimeSinceStartup;
         List<Vector3> vertTemp = new List<Vector3>();
         List<int> vertFail = new List<int>();
         List<int> vertSuccess = new List<int>();
@@ -58,7 +59,6 @@ public class FaceBuilder
                 }
             }
         }
-
         if (vertTemp.Count == 5 && fivePointActive)
         {
             //Rectangular Prism
@@ -126,7 +126,6 @@ public class FaceBuilder
                 }
             }
         }
-
         if (vertSuccess.Count == 4)
         {
             if (vertFail[0] == 4 && vertFail[1] == 5 && fourHoriSquareActive)
@@ -257,7 +256,6 @@ public class FaceBuilder
                     }
                 }
             }
-
             else if (fourTetraActive)
             {
                 //Tetrahedron
@@ -292,7 +290,6 @@ public class FaceBuilder
             }
 
         }
-
         if (vertTemp.Count == 3 && threePointActive)
         {
             //Triangle

@@ -104,7 +104,7 @@ public class World : MonoBehaviour
 
     bool Land(Vector3 point)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, Chunk.noiseScale).value * 20 + 10;
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, Chunk.noiseScale).value * 20;
         return noiseVal < Chunk.threshold - point.y * Chunk.thresDropOff;
     }
 

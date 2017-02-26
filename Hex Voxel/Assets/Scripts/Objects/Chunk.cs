@@ -28,6 +28,9 @@ public class Chunk : MonoBehaviour
     bool pointsReady;
     static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
 
+    //Corners for Interpolation
+    public float[,,] corners = new float[2, 2, 2];
+
     //Noise Parameters
     public static float noiseScale = 0.01f;
     public static float threshold = 0f;
@@ -35,6 +38,7 @@ public class Chunk : MonoBehaviour
     
     //Other Options
     public bool meshRecalculate;
+    float startTime;
     #endregion
 
     #region Calculated Lists
@@ -52,6 +56,8 @@ public class Chunk : MonoBehaviour
 
     void Start()
     {
+        float startTime = Time.realtimeSinceStartup;
+        FindCorners();
         GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
         Array.Clear(hits, 0, hits.Length);
@@ -88,12 +94,24 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region Face Construction
+    void FindCorners()
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            int x = i < 4 ? 1 : 0;
+            int y = i / 2 % 2 == 1 ? 1 : 0;
+            int z = i % 2 == 1 ? 1 : 0;
+            corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
+        }
+    }
+    
     /// <summary>
     /// Creates mesh
     /// </summary>
     /// <param name="wid">Width of points to be generated</param>
     void GenerateMesh(Vector3 size)
     {
+        startTime = Time.realtimeSinceStartup;
         List<Vector3> verts = new List<Vector3>();
         List<int> tris = new List<int>();
         List<Vector3> normals = new List<Vector3>();
@@ -114,6 +132,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
+        //print("Hits Read: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
@@ -125,6 +144,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
+        //print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         //Mesh Procedure
         MeshFilter filter = gameObject.GetComponent<MeshFilter>();
         MeshCollider collider = gameObject.GetComponent<MeshCollider>();
@@ -142,6 +162,7 @@ public class Chunk : MonoBehaviour
         filter.mesh = mesh;
         collider.sharedMesh = mesh;
         if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
+        //print("Mesh Generated: " + ((Time.realtimeSinceStartup - startTime) * 1000));
     }
     #endregion
 
@@ -161,15 +182,24 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool GradientCheck(Vector3 point)
     {
+        float x = point.x;
+        float y = point.y;
+        float z = point.z;
         Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative + new Vector3(0, thresDropOff, 0);
+        //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
         gradient = gradient.normalized * sqrt3;
-        //print(gradient);
         WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
         if (!Land(PosToHex(HexToPos(hexPos) + gradient)) && Land(PosToHex(HexToPos(hexPos) - gradient)))
             return true;
         return false;
     }
 
+    public bool Land(Vector3 point)
+    {
+        return GetInterp(point)<threshold;
+    }
+
+    /*
     /// <summary>
     /// Checks if the point is within a solid
     /// </summary>
@@ -177,9 +207,10 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool Land(Vector3 point)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).value * 20 + 10;
-        return noiseVal < threshold - point.y * thresDropOff;
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).value * 20;
+        return noiseVal < threshold - point.y * thresDropOff;// + Mathf.Pow(Mathf.Pow(point.x,2)+Mathf.Pow(point.z,2),4) * Mathf.Pow(10, -12);
     }
+    */
 
     /// <summary>
     /// Checks if a triangle faces the same direction as the noise
@@ -190,6 +221,33 @@ public class Chunk : MonoBehaviour
     public bool TriNormCheck(Vector3 center, Vector3 normal)
     {
         return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative, normal);
+    }
+
+    public float GetInterp(Vector3 pos)
+    {
+        Vector3 low = HexOffset;
+        Vector3 high = HexOffset + new Vector3(chunkSize, chunkHeight, chunkSize);
+
+        float xD = (pos.x - low.x) / (high.x - low.x);
+        float yD = (pos.y - low.y) / (high.y - low.y);
+        float zD = (pos.z - low.z) / (high.z - low.z);
+
+        float c00 = corners[0, 0, 0] * (1 - xD) + corners[1, 0, 0] * xD;
+        float c01 = corners[0, 0, 1] * (1 - xD) + corners[1, 0, 1] * xD;
+        float c10 = corners[0, 1, 0] * (1 - xD) + corners[1, 1, 0] * xD;
+        float c11 = corners[0, 1, 1] * (1 - xD) + corners[1, 1, 1] * xD;
+
+        float c0 = c00 * (1 - yD) + c10 * yD;
+        float c1 = c01 * (1 - yD) + c11 * yD;
+
+        float c = c0 * (1 - zD) + c1 * zD;
+        return c;
+    }
+
+    public static float GetNoise(Vector3 pos)
+    {
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](pos, noiseScale).value * 20 + pos.y * thresDropOff;
+        return noiseVal;
     }
 
     public static Vector3 GetNormal(Vector3 pos)
