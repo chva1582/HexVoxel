@@ -33,6 +33,11 @@ public struct WorldPos
         }
     }
 
+    public static WorldPos operator +(WorldPos w1, WorldPos w2)
+    {
+        return new WorldPos(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
+    }
+
     public Vector3 ToVector3()
     {
         Vector3 output = new Vector3();

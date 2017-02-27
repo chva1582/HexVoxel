@@ -223,7 +223,7 @@ public class FaceBuilder
             }
             else if (vertFail[0] == 0 && vertFail[1] == 1)
             {
-                Debug.Log("Vert Part 2");
+                //Debug.Log("Vert Part 2");
             }
             else if (vertSuccess[2] == 4 && vertSuccess[3] == 5)
             {

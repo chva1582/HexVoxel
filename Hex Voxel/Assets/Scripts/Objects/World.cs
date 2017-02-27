@@ -15,6 +15,15 @@ public class World : MonoBehaviour
     public DebugMode debugMode = DebugMode.None;
     public PointMode pointMode;
 
+    //Geometric Booleans
+    public static bool sixPointActive = true, sixFaceCancel;
+    public static bool fivePointActive = true, fiveFaceCancel;
+    public static bool fourHoriSquareActive = true, fourHoriFaceReverse;
+    public static bool fourVertSquareActive = true, fourVertFaceReverse;
+    public static bool fourTetraActive = true, fourTetraFaceCancel;
+    public static bool threePointActive = true, threeFaceReverse;
+    public static bool thirdDiagonalActive = true, thirdDiagonalFaceReverse;
+    
     static float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
     static float g = (2f / 3f) * Mathf.Sqrt(3);
     static float h = Mathf.Sqrt(3);

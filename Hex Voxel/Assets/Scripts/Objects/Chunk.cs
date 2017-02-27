@@ -26,7 +26,8 @@ public class Chunk : MonoBehaviour
 
     //Storage
     bool pointsReady;
-    static bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
+    bool[,,] hits = new bool[chunkSize, chunkHeight, chunkSize];
+    Vertex[,,] vertexes = new Vertex[chunkSize, chunkHeight, chunkSize];
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
@@ -60,7 +61,7 @@ public class Chunk : MonoBehaviour
         FindCorners();
         GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
-        Array.Clear(hits, 0, hits.Length);
+        
     }
 
     #region On Draw
@@ -123,9 +124,12 @@ public class Chunk : MonoBehaviour
                 {
                     Vector3 center = new Vector3(i, j, k);
                     Vector3 shiftedCenter = center + HexOffset;
-                    if (GradientCheck(shiftedCenter)) //Land(shiftedCenter)
+                    vertexes[i, j, k] = new Vertex(this, new WorldPos(i, j, k), verts.Count);
+                    Vertex vertex = vertexes[i, j, k];
+                    if (GradientCheck(shiftedCenter))
                     {
                         hits[i, j, k] = true;
+                        vertex.isSolid = true;
                         if(world.pointMode == PointMode.Gradient) { CreatePoint(center); }
                     }
                     if (world.pointMode == PointMode.All) { CreatePoint(center); }
@@ -140,6 +144,11 @@ public class Chunk : MonoBehaviour
                 for (int k = 0; k < size.z; k++)
                 {
                     Vector3 center = new Vector3(i, j, k);
+                    //vertexes[i, j, k].VertCount = verts.Count;
+                    //vertexes[i, j, k].Build();
+                    //verts.AddRange((vertexes[i, j, k].verts));
+                    //tris.AddRange((vertexes[i, j, k].tris));
+                    //normals.AddRange((vertexes[i, j, k].normals));
                     FaceBuilder.Build(center, GetComponent<Chunk>(), ref verts, ref tris, ref normals);
                 }
             }
@@ -152,7 +161,8 @@ public class Chunk : MonoBehaviour
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
         {
-            Vector3 offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
+            //Vector3 offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
+            Vector3 offset = Vector3.zero;
             posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset);
         }
         mesh.vertices = posVerts.ToArray();
@@ -196,21 +206,8 @@ public class Chunk : MonoBehaviour
 
     public bool Land(Vector3 point)
     {
-        return GetInterp(point)<threshold;
+        return GetNoise(point)<threshold;
     }
-
-    /*
-    /// <summary>
-    /// Checks if the point is within a solid
-    /// </summary>
-    /// <param name="point">hex point to check</param>
-    /// <returns>Boolean</returns>
-    public bool Land(Vector3 point)
-    {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](point, noiseScale).value * 20;
-        return noiseVal < threshold - point.y * thresDropOff;// + Mathf.Pow(Mathf.Pow(point.x,2)+Mathf.Pow(point.z,2),4) * Mathf.Pow(10, -12);
-    }
-    */
 
     /// <summary>
     /// Checks if a triangle faces the same direction as the noise
@@ -319,11 +316,10 @@ public class Chunk : MonoBehaviour
         List<Vector3> vertTemp = new List<Vector3>();
         List<int> vertFail = new List<int>();
         List<int> vertSuccess = new List<int>();
-        print(vertSuccess.Count);
         for (int i = 0; i < 6; i++)
         {
             Vector3 vert = center + hexPoints[i];
-            print(vert + "(Check Point) " + i);
+            print(vert + "(Check Point) " + i + ", " + CheckHit(vert));
             if (CheckHit(vert))
             {
                 vertTemp.Add(vert);
@@ -332,6 +328,7 @@ public class Chunk : MonoBehaviour
             else
                 vertFail.Add(i);
         }
+        print(vertSuccess.Count);
         switch (vertTemp.Count)
         {
             case 6:
