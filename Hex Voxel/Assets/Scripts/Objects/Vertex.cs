@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -87,6 +86,7 @@ public class Vertex
             default:
                 break;
         }
+        BuildThirdSlant();
     }
 
     void GetHitList()
@@ -154,27 +154,26 @@ public class Vertex
             }
         }
         //Flat Part
-        VertCount = verts.Count;
+        VertCount += verts.Count;
         vertTemp.Remove(failPoint % 2 == 0 ? vertTemp[vertFailOpposite - 1] : vertTemp[vertFailOpposite]);
         BuildPlane(failPoint);
     }
 
     void BuildPlane(int failPoint)
     {
-        //Debug.Log(string.Empty);
         Vector3 faceVec = Chunk.hexPoints[failPoint];
         if (chunk.TriNormCheck(center.ToVector3(), faceVec.normalized) || !World.fourVertFaceReverse)
         {
             for (int i = 0; i < 3; i++)
             {
                 verts.Add(vertTemp[i]);
-                tris.Add(VertCount + i);
+                tris.Add(VertCount + 3 - i);
                 normals.Add(Chunk.GetNormal(center.ToVector3()));
             }
             for (int i = 0; i < 3; i++)
             {
                 verts.Add(vertTemp[i == 2 ? 3 : i]);
-                tris.Add(VertCount + 5 - i);
+                tris.Add(VertCount + 3 + i);
                 normals.Add(Chunk.GetNormal(center.ToVector3()));
             }
         }
@@ -263,6 +262,33 @@ public class Vertex
                 tris.Add(VertCount + 3 + i);
             else
                 tris.Add(VertCount + 5 - i);
+        }
+    }
+
+    void BuildThirdSlant()
+    {
+        if (chunk.CheckHit(center.ToVector3()) && chunk.CheckHit(center.ToVector3() + Chunk.hexPoints[1]) && chunk.CheckHit(center.ToVector3() - Chunk.hexPoints[3] + Chunk.hexPoints[5]) && chunk.CheckHit(center.ToVector3() + Chunk.hexPoints[2] + Chunk.hexPoints[5]) && World.thirdDiagonalActive)
+        {
+            vertCount = verts.Count;
+            vertTemp.Clear();
+            vertTemp.Add(center.ToVector3());
+            vertTemp.Add(center.ToVector3() - Chunk.hexPoints[3] + Chunk.hexPoints[5]);
+            vertTemp.Add(center.ToVector3() + Chunk.hexPoints[2] + Chunk.hexPoints[5]);
+            vertTemp.Add(center.ToVector3());
+            vertTemp.Add(center.ToVector3() + Chunk.hexPoints[2] + Chunk.hexPoints[5]);
+            vertTemp.Add(center.ToVector3() + Chunk.hexPoints[1]);
+            for (int i = 0; i < 6; i++)
+            {
+                verts.Add(vertTemp[i]);
+                tris.Add(vertCount + i);
+                normals.Add(Chunk.GetNormal(center.ToVector3()));
+            }
+            for (int i = 0; i < 6; i++)
+            {
+                verts.Add(vertTemp[5 - i]);
+                tris.Add(vertCount + 6 + i);
+                normals.Add(Chunk.GetNormal(center.ToVector3()));
+            }
         }
     }
 }
