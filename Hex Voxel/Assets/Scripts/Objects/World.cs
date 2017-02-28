@@ -39,7 +39,7 @@ public class World : MonoBehaviour
     void Start()
     {
         if(!areaLoad)
-            CreateChunk(new WorldPos(-1, -1, -1));
+            CreateChunk(new WorldPos(-1, -1, 0));
     }
 
     void Update()

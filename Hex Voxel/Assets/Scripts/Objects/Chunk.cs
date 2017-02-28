@@ -13,6 +13,7 @@ public class Chunk : MonoBehaviour
     public WorldPos chunkCoords;
     public bool update;
     public bool rendered = true;
+    bool uniform;
 
     //Measurements
     public static int chunkSize = 16;
@@ -58,7 +59,8 @@ public class Chunk : MonoBehaviour
     {
         float startTime = Time.realtimeSinceStartup;
         FindCorners();
-        GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
+        if(!uniform)
+            GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
         
     }
@@ -103,6 +105,7 @@ public class Chunk : MonoBehaviour
             int z = i % 2 == 1 ? 1 : 0;
             corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
         }
+        CheckUniformity();
     }
     
     /// <summary>
@@ -134,7 +137,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-        print("Hits Read: " + ((Time.realtimeSinceStartup - startTime) * 1000));
+        //print("Hits Read: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
@@ -150,7 +153,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-        print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
+        //print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         //Mesh Procedure
         MeshFilter filter = gameObject.GetComponent<MeshFilter>();
         MeshCollider collider = gameObject.GetComponent<MeshCollider>();
@@ -263,6 +266,21 @@ public class Chunk : MonoBehaviour
         else
             output = world.CheckHit(HexToPos(point.ToWorldPos()));
         return output;
+    }
+
+    void CheckUniformity()
+    {
+        bool allLow = true;
+        bool allHigh = true;
+        foreach (var corner in corners)
+        {
+            if (corner - threshold < 1)
+                allHigh = false;
+            if (corner - threshold > -1)
+                allLow = false;
+        }
+        if (allHigh || allLow)
+            uniform = true;
     }
     #endregion
 
