@@ -62,7 +62,7 @@ public class Chunk : MonoBehaviour
         if(!uniform)
             GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
-        
+
     }
 
     #region On Draw
@@ -153,6 +153,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
+        //vertexes[0, 0, 0].BuildLookupTables();
         //print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         //Mesh Procedure
         MeshFilter filter = gameObject.GetComponent<MeshFilter>();
@@ -161,8 +162,9 @@ public class Chunk : MonoBehaviour
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
         {
-            //Vector3 offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
             Vector3 offset = Vector3.zero;
+            if (world.offsetLand)
+                offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
             posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset);
         }
         mesh.vertices = posVerts.ToArray();

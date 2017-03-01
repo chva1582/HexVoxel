@@ -9,6 +9,7 @@ public class World : MonoBehaviour
     public bool pointLoc;
     public bool show;
     public bool areaLoad;
+    public bool offsetLand;
     public float size;
     public GameObject chunk;
 
@@ -33,6 +34,9 @@ public class World : MonoBehaviour
 
     static Vector3[] h2P = { new Vector3(h, g, 0), new Vector3(0, f, 0), new Vector3(-1, 0, 2) };
 
+    public static Dictionary<int, Vector3[]> vertLookup = new Dictionary<int, Vector3[]>();
+    public static Dictionary<int, int[]> triLookup = new Dictionary<int, int[]>();
+
     public Dictionary<WorldPos, Chunk> chunks = new Dictionary<WorldPos, Chunk>();
 
     // Use this for initialization
@@ -40,7 +44,54 @@ public class World : MonoBehaviour
     {
         if(!areaLoad)
             CreateChunk(new WorldPos(-1, -1, 0));
+        LookupTableConstruction();
     }
+
+    #region Variable Setup
+    void LookupTableConstruction()
+    {
+        string vertStringFull = PlayerPrefs.GetString("Vertices Dictionary");
+        string triStringFull = PlayerPrefs.GetString("Triangles Dictionary");
+
+        string[] dictItemsV = vertStringFull.Split(new char[] { '|' });
+        string[] dictItemsT = triStringFull.Split(new char[] { '|' });
+        foreach (string item in dictItemsV)
+        {
+            if (item == "")
+                continue;
+            int boolInt = int.Parse(item.Split(new char[] { ':' })[0]);
+            string vertsString = item.Split(new char[] { ':' })[1];
+            List<Vector3> vertList = new List<Vector3>();
+            foreach (string vert in vertsString.Split(new char[] { '.' }))
+            {
+                if (vert == "")
+                    continue;
+                Vector3 extractedVert = new Vector3();
+                extractedVert.x = float.Parse(vert.Split(new char[] { ',' })[0]);
+                extractedVert.y = float.Parse(vert.Split(new char[] { ',' })[1]);
+                extractedVert.z = float.Parse(vert.Split(new char[] { ',' })[2]);
+                vertList.Add(extractedVert);
+            }
+            vertLookup.Add(boolInt, vertList.ToArray());
+        }
+        foreach (string item in dictItemsT)
+        {
+            if (item == "")
+                break;
+            int boolInt = int.Parse(item.Split(new char[] { ':' })[0]);
+            string trisString = item.Split(new char[] { ':' })[1];
+            
+            List<int> triList = new List<int>();
+            foreach (string tri in trisString.Split(new char[] { '.' }))
+            {
+                if (tri == "")
+                    break;
+                triList.Add(int.Parse(tri));
+            }
+            triLookup.Add(boolInt, triList.ToArray());
+        }
+    }
+    #endregion
 
     void Update()
     {
@@ -169,5 +220,15 @@ public class World : MonoBehaviour
         output.z = chunkCoord.z * Chunk.chunkSize;
         output += Vector3.one;
         return HexToPos(output);
+    }
+
+    public static int boolArrayToInt(bool[] boo)
+    {
+        int total = 0;
+        for (int i = 0; i < boo.Length; i++)
+        {
+            total += (boo[i]?1:0) * (int)Mathf.Pow(2, i);
+        }
+        return total;
     }
 }

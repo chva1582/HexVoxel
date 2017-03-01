@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,6 +21,8 @@ public class Vertex
     private int vertCount;
     public int VertCount{ get{ return vertCount; } set{ vertCount = value; }}
 
+    bool[] bits;
+
     public Vertex(Chunk targetChunk, WorldPos position, int inVertCount)
     {
         chunk = targetChunk;
@@ -29,6 +32,174 @@ public class Vertex
     }
 
     public void Build()
+    {
+        GetHitList();
+        bool[] hitList = new bool[6];
+        foreach (int success in vertSuccess)
+            hitList[success] = true;
+
+        int[] tempTriArray;
+        Vector3[] tempVertArray;
+
+        World.triLookup.TryGetValue(World.boolArrayToInt(hitList), out tempTriArray);
+        World.vertLookup.TryGetValue(World.boolArrayToInt(hitList), out tempVertArray);
+
+        if (tempTriArray == null)
+            tempTriArray = new int[0];
+        if (tempVertArray == null)
+            tempVertArray = new Vector3[0];
+
+        List<int> tempTempTri = new List<int>();
+        foreach (int tri in tempTriArray)
+            tempTempTri.Add(tri + vertCount);
+
+        List<Vector3> temptempVert = new List<Vector3>();
+        foreach (Vector3 vert in tempVertArray)
+            temptempVert.Add(vert + center.ToVector3());
+
+        tris = tempTempTri;
+        verts = temptempVert;
+    }
+
+    void GetHitList()
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 vert = (center + Chunk.hexPoints[i].ToWorldPos()).ToVector3();
+            if (chunk.CheckHit(vert))
+            {
+                vertTemp.Add(vert);
+                vertSuccess.Add(i);
+            }
+            else
+                vertFail.Add(i);
+        }
+    }
+
+    #region Lookup Construction
+    public void BuildLookupTables()
+    {
+        string totalVert = string.Empty;
+        string totalTri = string.Empty;
+        for (int i = 0; i < 64; i++)
+        {
+            VertCount = 0;
+            verts.Clear();
+            tris.Clear();
+            vertTemp.Clear();
+            vertSuccess.Clear();
+            vertFail.Clear();
+            center = new WorldPos(0, 0, 0);
+            BitArray b = new BitArray(new int[] { i });
+            bool[] bits = new bool[6];
+            for (int index = 0; index < 6; index++)
+            {
+                bits[index] = b[index];
+            }
+            string bitString = string.Empty;
+            //foreach (var bit in bits)
+            //{
+            //    bitString += (bit ? 1 : 0 ) + ".";
+            //}
+            bitString = World.boolArrayToInt(bits).ToString();
+            GetHitListForLookup(bits);
+            switch (vertSuccess.Count)
+            {
+                case 6:
+                    if (World.sixPointActive)
+                        BuildOctahedron();
+                    break;
+                case 5:
+                    if (World.fivePointActive)
+                        BuildPyramid(vertFail[0]);
+                    break;
+                case 4:
+                    if (World.fourVertSquareActive)
+                    {
+                        if (vertFail[0] == 4 && vertFail[1] == 5)
+                        {
+                            BuildPlane(vertFail[0]);
+                            break;
+                        }
+                        else if (vertFail[0] == 2 && vertFail[1] == 3)
+                        {
+                            BuildPlane(vertFail[0]);
+                            break;
+                        }
+                        else if (vertFail[0] == 0 && vertFail[1] == 1)
+                        {
+                            BuildPlane(vertFail[0]);
+                            break;
+                        }
+                    }
+                    if (World.fourTetraActive)
+                    {
+                        if (vertSuccess[2] == 4 && vertSuccess[3] == 5)
+                        {
+                            BuildCorner(vertSuccess[0], vertSuccess[1]);
+                            break;
+                        }
+                        else if (vertFail[0] == 0 || vertFail[0] == 1)
+                        {
+                            BuildNewTetrahedron(vertFail[0], vertFail[1]);
+                            break;
+                        }
+                        else
+                        {
+                            BuildTetrahedron(vertSuccess[2], vertSuccess[3]);
+                            break;
+                        }
+                    }
+                    break;
+                case 3:
+                    if (World.threePointActive)
+                        BuildTriangle();
+                    break;
+                default:
+                    break;
+            }
+            string vertString = string.Empty;
+            string triString = string.Empty;
+            foreach (var vert in verts)
+            {
+                vertString += ((int)vert.x).ToString() + "," + ((int)vert.y).ToString() + "," + ((int)vert.z).ToString() + ".";
+            }
+            foreach (var tri in tris)
+            {
+                triString += tri.ToString() + ".";
+            }
+            totalVert += bitString + ":" + vertString + "|";
+            totalTri += bitString + ":" + triString + "|";
+        }
+        Debug.Log(totalTri);
+        Debug.Log(totalVert);
+        //
+        PlayerPrefs.SetString("Vertices Dictionary", totalVert);
+        PlayerPrefs.SetString("Triangles Dictionary", totalTri);
+        //Debug.Log(PlayerPrefs.GetString("Vertices Dictionary"));
+        //Debug.Log(PlayerPrefs.GetString("Triangles Dictionary"));
+        //BuildThirdSlant();
+    }
+
+    void GetHitListForLookup(bool[] hits)
+    {
+        
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 vert = (center + Chunk.hexPoints[i].ToWorldPos()).ToVector3();
+            if (hits[i])
+            {
+                vertTemp.Add(vert);
+                vertSuccess.Add(i);
+            }
+            else
+                vertFail.Add(i);
+        }
+    }
+    #endregion
+
+    #region Manual
+    public void BuildManual()
     {
         GetHitList();
         switch (vertSuccess.Count)
@@ -60,7 +231,7 @@ public class Vertex
                         break;
                     }
                 }
-                if(World.fourTetraActive)
+                if (World.fourTetraActive)
                 {
                     if (vertSuccess[2] == 4 && vertSuccess[3] == 5)
                     {
@@ -87,21 +258,6 @@ public class Vertex
                 break;
         }
         BuildThirdSlant();
-    }
-
-    void GetHitList()
-    {
-        for (int i = 0; i < 6; i++)
-        {
-            Vector3 vert = (center + Chunk.hexPoints[i].ToWorldPos()).ToVector3();
-            if (chunk.CheckHit(vert))
-            {
-                vertTemp.Add(vert);
-                vertSuccess.Add(i);
-            }
-            else
-                vertFail.Add(i);
-        }
     }
 
     void BuildOctahedron()
@@ -291,4 +447,5 @@ public class Vertex
             }
         }
     }
+    #endregion
 }
