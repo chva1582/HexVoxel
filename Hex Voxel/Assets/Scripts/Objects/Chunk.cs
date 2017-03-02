@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -16,8 +15,8 @@ public class Chunk : MonoBehaviour
     bool uniform;
 
     //Measurements
-    public static int chunkSize = 16;
-    public static int chunkHeight = 16;
+    public static int chunkSize = 8;
+    public static int chunkHeight = 8;
 
     //Components
     public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
@@ -62,7 +61,6 @@ public class Chunk : MonoBehaviour
         if(!uniform)
             GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
-
     }
 
     #region On Draw
