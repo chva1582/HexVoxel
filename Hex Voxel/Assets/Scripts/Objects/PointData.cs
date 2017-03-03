@@ -19,7 +19,7 @@ public class PointData : MonoBehaviour
         Vector3 pos = transform.position;
         if (world.debugMode == DebugMode.Octahedron)
         {
-            Gizmos.color = Color.green;
+            Gizmos.color = Color.red;
             for (int i = 0; i < 6; i++)
             {
                 for (int j = 5; j > i; j--)
