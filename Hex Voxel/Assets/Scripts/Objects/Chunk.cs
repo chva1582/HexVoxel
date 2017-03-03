@@ -206,7 +206,7 @@ public class Chunk : MonoBehaviour
 
     public bool Land(Vector3 point)
     {
-        return GetNoise(point)<threshold;
+        return GetInterp(point)<threshold;
     }
 
     /// <summary>

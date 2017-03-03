@@ -41,8 +41,8 @@ public class Vertex
         int[] tempTriArray;
         Vector3[] tempVertArray;
 
-        World.triLookup.TryGetValue(World.boolArrayToInt(hitList), out tempTriArray);
-        World.vertLookup.TryGetValue(World.boolArrayToInt(hitList), out tempVertArray);
+        tempTriArray = World.triLookup[World.boolArrayToInt(hitList)];
+        tempVertArray = World.vertLookup[World.boolArrayToInt(hitList)];
 
         if (tempTriArray == null)
             tempTriArray = new int[0];
@@ -97,10 +97,6 @@ public class Vertex
                 bits[index] = b[index];
             }
             string bitString = string.Empty;
-            //foreach (var bit in bits)
-            //{
-            //    bitString += (bit ? 1 : 0 ) + ".";
-            //}
             bitString = World.boolArrayToInt(bits).ToString();
             GetHitListForLookup(bits);
             switch (vertSuccess.Count)
@@ -168,8 +164,8 @@ public class Vertex
             {
                 triString += tri.ToString() + ".";
             }
-            totalVert += bitString + ":" + vertString + "|";
-            totalTri += bitString + ":" + triString + "|";
+            totalVert += vertString + "|";
+            totalTri += triString + "|";
         }
         Debug.Log(totalTri);
         Debug.Log(totalVert);

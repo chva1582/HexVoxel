@@ -34,8 +34,8 @@ public class World : MonoBehaviour
 
     static Vector3[] h2P = { new Vector3(h, g, 0), new Vector3(0, f, 0), new Vector3(-1, 0, 2) };
 
-    public static Dictionary<int, Vector3[]> vertLookup = new Dictionary<int, Vector3[]>();
-    public static Dictionary<int, int[]> triLookup = new Dictionary<int, int[]>();
+    public static List<Vector3[]> vertLookup = new List<Vector3[]>();
+    public static List<int[]> triLookup = new List<int[]>();
 
     public Dictionary<WorldPos, Chunk> chunks = new Dictionary<WorldPos, Chunk>();
 
@@ -53,14 +53,11 @@ public class World : MonoBehaviour
         string vertStringFull = PlayerPrefs.GetString("Vertices Dictionary");
         string triStringFull = PlayerPrefs.GetString("Triangles Dictionary");
 
-        string[] dictItemsV = vertStringFull.Split(new char[] { '|' });
-        string[] dictItemsT = triStringFull.Split(new char[] { '|' });
-        foreach (string item in dictItemsV)
+        string[] arrayItemsV = vertStringFull.Split(new char[] { '|' });
+        string[] arrayItemsT = triStringFull.Split(new char[] { '|' });
+        foreach (string item in arrayItemsV)
         {
-            if (item == "")
-                continue;
-            int boolInt = int.Parse(item.Split(new char[] { ':' })[0]);
-            string vertsString = item.Split(new char[] { ':' })[1];
+            string vertsString = item;
             List<Vector3> vertList = new List<Vector3>();
             foreach (string vert in vertsString.Split(new char[] { '.' }))
             {
@@ -72,24 +69,23 @@ public class World : MonoBehaviour
                 extractedVert.z = float.Parse(vert.Split(new char[] { ',' })[2]);
                 vertList.Add(extractedVert);
             }
-            vertLookup.Add(boolInt, vertList.ToArray());
+            vertLookup.Add(vertList.ToArray());
         }
-        foreach (string item in dictItemsT)
+        vertLookup.RemoveAt(64);
+        foreach (string item in arrayItemsT)
         {
-            if (item == "")
-                break;
-            int boolInt = int.Parse(item.Split(new char[] { ':' })[0]);
-            string trisString = item.Split(new char[] { ':' })[1];
+            string trisString = item;
             
             List<int> triList = new List<int>();
             foreach (string tri in trisString.Split(new char[] { '.' }))
             {
                 if (tri == "")
-                    break;
+                    continue;
                 triList.Add(int.Parse(tri));
             }
-            triLookup.Add(boolInt, triList.ToArray());
+            triLookup.Add(triList.ToArray());
         }
+        triLookup.RemoveAt(64);
     }
     #endregion
 
