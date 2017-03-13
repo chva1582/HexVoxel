@@ -49,7 +49,7 @@ public class Chunk : MonoBehaviour
         new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
 
     public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1), 
-        new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0)};
+        new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0), new Vector3(-1,1,0), new Vector3(0,1,1)};
 
     public static float sqrt3 = Mathf.Sqrt(3);
     #endregion

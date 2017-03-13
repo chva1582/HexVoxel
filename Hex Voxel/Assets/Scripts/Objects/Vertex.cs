@@ -59,6 +59,8 @@ public class Vertex
 
         tris = tempTempTri;
         verts = temptempVert;
+
+        BuildThirdSlant();
     }
 
     void GetHitList()
@@ -96,8 +98,6 @@ public class Vertex
             {
                 bits[index] = b[index];
             }
-            string bitString = string.Empty;
-            bitString = World.boolArrayToInt(bits).ToString();
             GetHitListForLookup(bits);
             switch (vertSuccess.Count)
             {
@@ -421,7 +421,7 @@ public class Vertex
     {
         if (chunk.CheckHit(center.ToVector3()) && chunk.CheckHit(center.ToVector3() + Chunk.hexPoints[1]) && chunk.CheckHit(center.ToVector3() - Chunk.hexPoints[3] + Chunk.hexPoints[5]) && chunk.CheckHit(center.ToVector3() + Chunk.hexPoints[2] + Chunk.hexPoints[5]) && World.thirdDiagonalActive)
         {
-            vertCount = verts.Count;
+            vertCount += verts.Count;
             vertTemp.Clear();
             vertTemp.Add(center.ToVector3());
             vertTemp.Add(center.ToVector3() - Chunk.hexPoints[3] + Chunk.hexPoints[5]);
@@ -433,13 +433,13 @@ public class Vertex
             {
                 verts.Add(vertTemp[i]);
                 tris.Add(vertCount + i);
-                normals.Add(Chunk.GetNormal(center.ToVector3()));
+                //normals.Add(Chunk.GetNormal(center.ToVector3()));
             }
             for (int i = 0; i < 6; i++)
             {
                 verts.Add(vertTemp[5 - i]);
                 tris.Add(vertCount + 6 + i);
-                normals.Add(Chunk.GetNormal(center.ToVector3()));
+                //normals.Add(Chunk.GetNormal(center.ToVector3()));
             }
         }
     }

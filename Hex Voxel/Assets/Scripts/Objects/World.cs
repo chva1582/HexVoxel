@@ -6,16 +6,7 @@ public enum PointMode { None, Gradient, All}
 
 public class World : MonoBehaviour
 {
-    public bool pointLoc;
-    public bool show;
-    public bool areaLoad;
-    public bool offsetLand;
-    public float size;
-    public GameObject chunk;
-
-    public DebugMode debugMode = DebugMode.None;
-    public PointMode pointMode;
-
+    #region Static Variables
     //Geometric Booleans
     public static bool sixPointActive = true, sixFaceCancel;
     public static bool fivePointActive = true, fiveFaceCancel;
@@ -36,16 +27,21 @@ public class World : MonoBehaviour
 
     public static List<Vector3[]> vertLookup = new List<Vector3[]>();
     public static List<int[]> triLookup = new List<int[]>();
+    #endregion
+
+    #region Object Variables
+    public bool pointLoc;
+    public bool show;
+    public bool areaLoad;
+    public bool offsetLand;
+    public float size;
+    public GameObject chunk;
 
     public Dictionary<WorldPos, Chunk> chunks = new Dictionary<WorldPos, Chunk>();
 
-    // Use this for initialization
-    void Start()
-    {
-        if(!areaLoad)
-            CreateChunk(new WorldPos(0, -2, 0));
-        LookupTableConstruction();
-    }
+    public DebugMode debugMode = DebugMode.None;
+    public PointMode pointMode;
+    #endregion
 
     #region Variable Setup
     void LookupTableConstruction()
@@ -89,6 +85,15 @@ public class World : MonoBehaviour
     }
     #endregion
 
+    #region Start, Update
+    // Use this for initialization
+    void Start()
+    {
+        if (!areaLoad)
+            CreateChunk(new WorldPos(0, -2, 0));
+        LookupTableConstruction();
+    }
+
     void Update()
     {
         
@@ -99,7 +104,9 @@ public class World : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.Return))
             CreateChunk(new WorldPos(2, 0, -1));
     }
+    #endregion
 
+    #region Chunk Control
     /// <summary>
     /// Instantiates a new Chunk and sets it up
     /// </summary>
@@ -142,7 +149,9 @@ public class World : MonoBehaviour
         Destroy(targetChunk.gameObject);
         chunks.Remove(chunkCoord);
     }
+    #endregion
 
+    #region Checks
     /// <summary>
     /// Finds if a point is active on a global scale
     /// </summary>
@@ -163,23 +172,9 @@ public class World : MonoBehaviour
         float noiseVal = Procedural.Noise.noiseMethods[0][2](point, Chunk.noiseScale).value * 20;
         return noiseVal < Chunk.threshold - point.y * Chunk.thresDropOff;
     }
+    #endregion
 
-    /*
-    public bool CheckHit(Vector3 pos)
-    {
-
-        Chunk checkChunk = GetChunk(pos);
-        print(PosToChunk(pos));
-        if (checkChunk != null)
-        {
-            print(string.Empty);
-            return checkChunk.CheckHit(checkChunk.PosToHex(pos));
-        }
-        else
-            return false;
-    }
-    */
-
+    #region Conversions
     public Vector3 HexToPos(Vector3 point)
     {
         Vector3 output;
@@ -227,4 +222,5 @@ public class World : MonoBehaviour
         }
         return total;
     }
+    #endregion
 }
