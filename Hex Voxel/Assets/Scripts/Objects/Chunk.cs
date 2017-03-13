@@ -195,9 +195,9 @@ public class Chunk : MonoBehaviour
         float x = point.x;
         float y = point.y;
         float z = point.z;
-        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative + new Vector3(0, thresDropOff, 0);
+        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative*20 + new Vector3(0, thresDropOff, 0);
         //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
-        gradient = gradient.normalized * sqrt3;
+        gradient = gradient.normalized * sqrt3/2;
         WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
         if (!Land(PosToHex(HexToPos(hexPos) + gradient)) && Land(PosToHex(HexToPos(hexPos) - gradient)))
             return true;
