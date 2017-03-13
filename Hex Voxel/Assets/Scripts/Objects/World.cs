@@ -34,6 +34,7 @@ public class World : MonoBehaviour
     public bool show;
     public bool areaLoad;
     public bool offsetLand;
+    public bool smoothLand;
     public float size;
     public GameObject chunk;
 
@@ -90,7 +91,7 @@ public class World : MonoBehaviour
     void Start()
     {
         if (!areaLoad)
-            CreateChunk(new WorldPos(0, -2, 0));
+            CreateChunk(new WorldPos(-29, -7, -12));
         LookupTableConstruction();
     }
 

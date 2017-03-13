@@ -161,9 +161,20 @@ public class Chunk : MonoBehaviour
         foreach (Vector3 hex in verts)
         {
             Vector3 offset = Vector3.zero;
+            Vector3 smooth = Vector3.zero;
             if (world.offsetLand)
                 offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
-            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset);
+            if(world.smoothLand)
+            {
+                Vector3 point = hex + HexOffset;
+                Vector3 norm = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+                norm = norm.normalized * sqrt3/2;
+                float A = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) + norm));
+                float B = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) - norm));
+                float T = 0;
+                smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B)/2) * -sqrt3 / 2;
+            }
+            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
         }
         mesh.vertices = posVerts.ToArray();
         mesh.triangles = tris.ToArray();
@@ -192,9 +203,9 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool GradientCheck(Vector3 point)
     {
-        float x = point.x;
-        float y = point.y;
-        float z = point.z;
+        //float x = point.x;
+        //float y = point.y;
+        //float z = point.z;
         Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative*20 + new Vector3(0, thresDropOff, 0);
         //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
         gradient = gradient.normalized * sqrt3/2;
