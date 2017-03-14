@@ -31,7 +31,7 @@ public class World : MonoBehaviour
 
     #region Object Variables
     public bool pointLoc;
-    public bool show;
+    public bool showNormals;
     public bool areaLoad;
     public bool offsetLand;
     public bool smoothLand;
@@ -39,6 +39,7 @@ public class World : MonoBehaviour
     public GameObject chunk;
 
     public Dictionary<WorldPos, Chunk> chunks = new Dictionary<WorldPos, Chunk>();
+    public Queue<GameObject> chunkPool = new Queue<GameObject>();
 
     public DebugMode debugMode = DebugMode.None;
     public PointMode pointMode;
@@ -116,11 +117,25 @@ public class World : MonoBehaviour
     {
         if (chunks.ContainsKey(pos))//This is kind of cheating this should have already been checked by some were getting through
             return;
-        GameObject newChunk = Instantiate(chunk, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0)) as GameObject;
-        Chunk chunkScript = newChunk.GetComponent<Chunk>();
-        chunkScript.chunkCoords = pos;
-        chunkScript.world = GetComponent<World>();
-        chunks.Add(chunkScript.chunkCoords, chunkScript);
+        GameObject newChunk;
+        if (chunkPool.Count > 0)
+        {
+            newChunk = chunkPool.Dequeue();
+            newChunk.SetActive(true);
+            Chunk chunkScript = newChunk.GetComponent<Chunk>();
+            chunkScript.chunkCoords = pos;
+            chunkScript.world = GetComponent<World>();
+            chunkScript.StartGeneration();
+            chunks.Add(chunkScript.chunkCoords, chunkScript);
+        }
+        else
+        {
+            newChunk = Instantiate(chunk, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0)) as GameObject;
+            Chunk chunkScript = newChunk.GetComponent<Chunk>();
+            chunkScript.chunkCoords = pos;
+            chunkScript.world = GetComponent<World>();
+            chunks.Add(chunkScript.chunkCoords, chunkScript);
+        }
     }
 
     /// <summary>
@@ -147,7 +162,9 @@ public class World : MonoBehaviour
         Chunk targetChunk = GetChunk(ChunkToPos(chunkCoord));
         if (targetChunk == null)
             print(targetChunk.chunkCoords);
-        Destroy(targetChunk.gameObject);
+        targetChunk.gameObject.SetActive(false);
+        chunkPool.Enqueue(targetChunk.gameObject);
+        //Destroy(targetChunk.gameObject);
         chunks.Remove(chunkCoord);
     }
     #endregion

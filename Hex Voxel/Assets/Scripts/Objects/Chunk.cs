@@ -21,6 +21,12 @@ public class Chunk : MonoBehaviour
     //Components
     public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
     public Vector3 PosOffset { get { return world.HexToPos(new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize)); } }
+    MeshFilter filter;
+    MeshCollider coll;
+    Mesh mesh;
+    List<Vector3> verts = new List<Vector3>();
+    List<int> tris = new List<int>();
+    List<Vector3> normals = new List<Vector3>();
     public World world;
     public GameObject dot;
 
@@ -56,10 +62,30 @@ public class Chunk : MonoBehaviour
 
     void Start()
     {
+        filter = gameObject.GetComponent<MeshFilter>();
+        coll = gameObject.GetComponent<MeshCollider>();
+        mesh = new Mesh();
+        StartGeneration();
+    }
+
+    public void StartGeneration()
+    {
         float startTime = Time.realtimeSinceStartup;
+        uniform = false;
         FindCorners();
-        if(!uniform)
-            GenerateMesh(new Vector3(chunkSize,chunkHeight,chunkSize));
+        verts.Clear();
+        tris.Clear();
+        normals.Clear();
+        mesh.Clear();
+        if (!uniform)
+            GenerateMesh(new Vector3(chunkSize, chunkHeight, chunkSize));
+
+        mesh.RecalculateBounds();
+
+        if (meshRecalculate) { mesh.RecalculateNormals(); }
+        filter.mesh = mesh;
+        coll.sharedMesh = mesh;
+        
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
     }
 
@@ -80,7 +106,7 @@ public class Chunk : MonoBehaviour
                         Vector3 vert = HexToPos(new WorldPos(i, j, k));
                         Gizmos.color = Color.gray;
                         Gizmos.DrawSphere(vert, .2f);
-                        if (world.show)
+                        if (world.showNormals)
                         {
                             Vector3 dir = Procedural.Noise.noiseMethods[0][2](vert, noiseScale).derivative.normalized;
                             Gizmos.color = Color.yellow;
@@ -113,9 +139,6 @@ public class Chunk : MonoBehaviour
     void GenerateMesh(Vector3 size)
     {
         startTime = Time.realtimeSinceStartup;
-        List<Vector3> verts = new List<Vector3>();
-        List<int> tris = new List<int>();
-        List<Vector3> normals = new List<Vector3>();
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
@@ -154,9 +177,6 @@ public class Chunk : MonoBehaviour
         //vertexes[0, 0, 0].BuildLookupTables();
         //print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         //Mesh Procedure
-        MeshFilter filter = gameObject.GetComponent<MeshFilter>();
-        MeshCollider collider = gameObject.GetComponent<MeshCollider>();
-        Mesh mesh = new Mesh();
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
         {
@@ -176,13 +196,9 @@ public class Chunk : MonoBehaviour
             }
             posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
         }
-        mesh.vertices = posVerts.ToArray();
-        mesh.triangles = tris.ToArray();
-        mesh.normals = normals.ToArray();
-        mesh.RecalculateBounds();
-        filter.mesh = mesh;
-        collider.sharedMesh = mesh;
-        if (meshRecalculate) { filter.mesh.RecalculateNormals(); }
+        mesh.SetVertices(posVerts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetNormals(normals);
         //print("Mesh Generated: " + ((Time.realtimeSinceStartup - startTime) * 1000));
     }
     #endregion
