@@ -33,9 +33,11 @@ public class Chunk : MonoBehaviour
     //Storage
     bool pointsReady;
     Vertex[,,] vertexes = new Vertex[chunkSize, chunkHeight, chunkSize];
+    Chunk[] neighbors = new Chunk[6];
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
+    public bool[,,] cornerInitialized = new bool[2, 2, 2];
 
     //Noise Parameters
     public static float noiseScale = 0.01f;
@@ -54,10 +56,16 @@ public class Chunk : MonoBehaviour
         new Vector3(Mathf.Sqrt(3)-(2*Mathf.Sqrt(3) / 3), -2 * Mathf.Sqrt(1-Mathf.Sqrt(3)/3), 1),
         new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
 
-    public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1), 
+    public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1),
         new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0), new Vector3(-1,1,0), new Vector3(0,1,1)};
 
     public static float sqrt3 = Mathf.Sqrt(3);
+
+    public static Vector3[] neighborChunkCoords = { new Vector3(-1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, -1, 0),
+        new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(0, 0, 1) };
+
+    public static int[][] neighborChunkCorners = { new int[]{ 0,1,2,3}, new int[]{ 4,5,6,7}, new int[] {0,1,4,5},
+        new int[] {2,3,6,7}, new int[] {0,2,4,6}, new int[] {1,3,5,7}};
     #endregion
 
     void Start()
@@ -72,6 +80,9 @@ public class Chunk : MonoBehaviour
     {
         float startTime = Time.realtimeSinceStartup;
         uniform = false;
+        corners = new float[2, 2, 2];
+        cornerInitialized = new bool[2, 2, 2];
+        FindNeighbors();
         FindCorners();
         verts.Clear();
         tris.Clear();
@@ -81,7 +92,6 @@ public class Chunk : MonoBehaviour
             GenerateMesh(new Vector3(chunkSize, chunkHeight, chunkSize));
 
         mesh.RecalculateBounds();
-
         if (meshRecalculate) { mesh.RecalculateNormals(); }
         filter.mesh = mesh;
         coll.sharedMesh = mesh;
@@ -120,14 +130,39 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region Face Construction
+    void FindNeighbors()
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            try { neighbors[i] = world.GetChunk(PosOffset + neighborChunkCoords[i]); }
+            catch { }
+        }
+    }
+
     void FindCorners()
     {
+        for (int i = 0; i < 6; i++)
+        {
+            if(neighbors[i] != null)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    int cornerIndex = neighborChunkCorners[i][j];
+                    int x = cornerIndex < 4 ? 1 : 0;
+                    int y = cornerIndex / 2 % 2 == 1 ? 1 : 0;
+                    int z = cornerIndex % 2 == 1 ? 1 : 0;
+                    corners[x, y, z] = neighbors[i].corners[i < 2 ? (x == 1 ? 0 : 1) : x, (i == 2 || i == 3) ? (y == 1 ? 0 : 1) : y, i > 3 ? (z == 1 ? 0 : 1) : z];
+                    cornerInitialized[x, y, z] = true;
+                }
+            }
+        }
         for (int i = 0; i < 8; i++)
         {
             int x = i < 4 ? 1 : 0;
             int y = i / 2 % 2 == 1 ? 1 : 0;
             int z = i % 2 == 1 ? 1 : 0;
-            corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
+            //if (!cornerInitialized[x, y, z])
+                corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
         }
         CheckUniformity();
     }
