@@ -24,15 +24,20 @@ public class Chunk : MonoBehaviour
     MeshFilter filter;
     MeshCollider coll;
     Mesh mesh;
+
     List<Vector3> verts = new List<Vector3>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
+    List<Vector3> vertTemp = new List<Vector3>();
+    List<int> vertFail = new List<int>();
+    List<int> vertSuccess = new List<int>();
+
     public World world;
     public GameObject dot;
 
     //Storage
     bool pointsReady;
-    Vertex[,,] vertexes = new Vertex[chunkSize, chunkHeight, chunkSize];
+    bool[,,] vertexes = new bool[chunkSize, chunkHeight, chunkSize];
     Chunk[] neighbors = new Chunk[6];
 
     //Corners for Interpolation
@@ -68,6 +73,7 @@ public class Chunk : MonoBehaviour
         new int[] {2,3,6,7}, new int[] {0,2,4,6}, new int[] {1,3,5,7}};
     #endregion
 
+    #region Start
     void Start()
     {
         filter = gameObject.GetComponent<MeshFilter>();
@@ -88,6 +94,7 @@ public class Chunk : MonoBehaviour
         tris.Clear();
         normals.Clear();
         mesh.Clear();
+        vertexes = new bool[chunkSize, chunkHeight, chunkSize];
         if (!uniform)
             GenerateMesh(new Vector3(chunkSize, chunkHeight, chunkSize));
 
@@ -98,6 +105,7 @@ public class Chunk : MonoBehaviour
         
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
     }
+#endregion
 
     #region On Draw
     /// <summary>
@@ -111,7 +119,7 @@ public class Chunk : MonoBehaviour
             {
                 for (int k = 0; k < chunkSize - 1; k++)
                 {
-                    if (vertexes[i, j, k].isSolid)
+                    if (vertexes[i, j, k])
                     {
                         Vector3 vert = HexToPos(new WorldPos(i, j, k));
                         Gizmos.color = Color.gray;
@@ -161,7 +169,7 @@ public class Chunk : MonoBehaviour
             int x = i < 4 ? 1 : 0;
             int y = i / 2 % 2 == 1 ? 1 : 0;
             int z = i % 2 == 1 ? 1 : 0;
-            //if (!cornerInitialized[x, y, z])
+            if (!cornerInitialized[x, y, z])
                 corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
         }
         CheckUniformity();
@@ -173,7 +181,6 @@ public class Chunk : MonoBehaviour
     /// <param name="wid">Width of points to be generated</param>
     void GenerateMesh(Vector3 size)
     {
-        startTime = Time.realtimeSinceStartup;
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
@@ -182,35 +189,27 @@ public class Chunk : MonoBehaviour
                 {
                     Vector3 center = new Vector3(i, j, k);
                     Vector3 shiftedCenter = center + HexOffset;
-                    vertexes[i, j, k] = new Vertex(this, new WorldPos(i, j, k), verts.Count);
-                    Vertex vertex = vertexes[i, j, k];
                     if (GradientCheck(shiftedCenter))
                     {
-                        vertex.isSolid = true;
+                        vertexes[i,j,k] = true;
                         if(world.pointMode == PointMode.Gradient) { CreatePoint(center); }
                     }
                     if (world.pointMode == PointMode.All) { CreatePoint(center); }
                 }
             }
         }
-        //print("Hits Read: " + ((Time.realtimeSinceStartup - startTime) * 1000));
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
             {
                 for (int k = 0; k < size.z; k++)
                 {
-                    Vector3 center = new Vector3(i, j, k);
-                    vertexes[i, j, k].VertCount = verts.Count;
-                    vertexes[i, j, k].Build();
-                    verts.AddRange((vertexes[i, j, k].verts));
-                    tris.AddRange((vertexes[i, j, k].tris));
-                    normals.AddRange((vertexes[i, j, k].normals));
+                    Build(new WorldPos(i,j,k));
                 }
             }
         }
         //vertexes[0, 0, 0].BuildLookupTables();
-        //print("Faces Built: " + ((Time.realtimeSinceStartup - startTime) * 1000));
+
         //Mesh Procedure
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
@@ -234,7 +233,56 @@ public class Chunk : MonoBehaviour
         mesh.SetVertices(posVerts);
         mesh.SetTriangles(tris, 0);
         mesh.SetNormals(normals);
-        //print("Mesh Generated: " + ((Time.realtimeSinceStartup - startTime) * 1000));
+    }
+
+    void Build(WorldPos center)
+    {
+        vertTemp = new List<Vector3>();
+        vertSuccess = new List<int>();
+        vertFail = new List<int>();
+        GetHitList(center);
+        bool[] hitList = new bool[6];
+        foreach (int success in vertSuccess)
+            hitList[success] = true;
+
+        int[] tempTriArray;
+        Vector3[] tempVertArray;
+
+        tempTriArray = World.triLookup[World.boolArrayToInt(hitList)];
+        tempVertArray = World.vertLookup[World.boolArrayToInt(hitList)];
+
+        if (tempTriArray == null)
+            tempTriArray = new int[0];
+        if (tempVertArray == null)
+            tempVertArray = new Vector3[0];
+
+        List<int> tempTempTri = new List<int>();
+        foreach (int tri in tempTriArray)
+            tempTempTri.Add(tri + verts.Count);
+
+        List<Vector3> temptempVert = new List<Vector3>();
+        foreach (Vector3 vert in tempVertArray)
+            temptempVert.Add(vert + center.ToVector3());
+
+        tris.AddRange(tempTempTri);
+        verts.AddRange(temptempVert);
+
+        //BuildThirdSlant();
+    }
+
+    void GetHitList(WorldPos center)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 vert = (center + hexPoints[i].ToWorldPos()).ToVector3();
+            if (CheckHit(vert))
+            {
+                vertTemp.Add(vert);
+                vertSuccess.Add(i);
+            }
+            else
+                vertFail.Add(i);
+        }
     }
     #endregion
 
@@ -322,9 +370,8 @@ public class Chunk : MonoBehaviour
     public bool CheckHit(Vector3 point)
     {
         bool output;
-        WorldPos checkChunk = world.PosToChunk(HexToPos(point.ToWorldPos()));
-        if (Equals(checkChunk, chunkCoords))
-            output = vertexes[Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z)].isSolid;
+        if (point.x < chunkSize && point.x > -1 && point.y < chunkHeight && point.y > -1 && point.z < chunkSize && point.z > -1)
+            output = vertexes[(int)(point.x + .5f), (int)(point.y + .5f), (int)(point.z + .5f)];
         else
             output = world.CheckHit(HexToPos(point.ToWorldPos()));
         return output;

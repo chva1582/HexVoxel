@@ -6,7 +6,6 @@ using UnityEngine;
 public class Vertex
 {
     Chunk chunk;
-    World world;
     public bool isSolid;
     public WorldPos center;
 
@@ -26,7 +25,6 @@ public class Vertex
     public Vertex(Chunk targetChunk, WorldPos position, int inVertCount)
     {
         chunk = targetChunk;
-        world = chunk.world;
         center = position;
         VertCount = inVertCount;
     }

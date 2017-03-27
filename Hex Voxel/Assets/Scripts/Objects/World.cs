@@ -92,7 +92,7 @@ public class World : MonoBehaviour
     void Start()
     {
         if (!areaLoad)
-            CreateChunk(new WorldPos(-29, -7, -12));
+            CreateChunk(new WorldPos(0, -2, 0));
         LookupTableConstruction();
     }
 
