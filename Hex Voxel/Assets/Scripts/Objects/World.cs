@@ -35,7 +35,8 @@ public class World : MonoBehaviour
     public bool areaLoad;
     public bool offsetLand;
     public bool smoothLand;
-    public float size;
+    public bool reloadRenderLists;
+    public RenderDistanceName renderDistance;
     public GameObject chunk;
 
     public Dictionary<WorldPos, Chunk> chunks = new Dictionary<WorldPos, Chunk>();
@@ -164,7 +165,6 @@ public class World : MonoBehaviour
             print(targetChunk.chunkCoords);
         targetChunk.gameObject.SetActive(false);
         chunkPool.Enqueue(targetChunk.gameObject);
-        //Destroy(targetChunk.gameObject);
         chunks.Remove(chunkCoord);
     }
     #endregion

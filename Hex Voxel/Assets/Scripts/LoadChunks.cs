@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 public class LoadChunks : MonoBehaviour
@@ -10,74 +9,28 @@ public class LoadChunks : MonoBehaviour
 
     List<WorldPos> updateList = new List<WorldPos>();
     List<WorldPos> buildList = new List<WorldPos>();
-    ChunkDistanceList startDistance;
+
+    bool reloadRenderLists;
+
+    static WorldPos[] chunkPositions;
+    static RenderDistance[] renderDistances = { new RenderDistance(RenderDistanceName.Short, "ShortRenderDistance.txt", 4096),
+        new RenderDistance(RenderDistanceName.Medium, "MediumRenderDistance.txt", 8192),
+        new RenderDistance(RenderDistanceName.Long, "LongRenderDistance.txt", 16384) };
 
     int timer = 0;
-
-    static WorldPos[] chunkPositions;/*= {   new WorldPos( 0, 0,  0), new WorldPos(-1, 0,  0), new WorldPos( 0, 0, -1), new WorldPos( 0, 0,  1), new WorldPos( 1, 0,  0),
-                            new WorldPos(-1, 0, -1), new WorldPos(-1, 0,  1), new WorldPos( 1, 0, -1), new WorldPos( 1, 0,  1), new WorldPos(-2, 0,  0),
-                            new WorldPos( 0, 0, -2), new WorldPos( 0, 0,  2), new WorldPos( 2, 0,  0), new WorldPos(-2, 0, -1), new WorldPos(-2, 0,  1),
-                            new WorldPos(-1, 0, -2), new WorldPos(-1, 0,  2), new WorldPos( 1, 0, -2), new WorldPos( 1, 0,  2), new WorldPos( 2, 0, -1),
-                            new WorldPos( 2, 0,  1), new WorldPos(-2, 0, -2), new WorldPos(-2, 0,  2), new WorldPos( 2, 0, -2), new WorldPos( 2, 0,  2),
-                            new WorldPos(-3, 0,  0), new WorldPos( 0, 0, -3), new WorldPos( 0, 0,  3), new WorldPos( 3, 0,  0) }, new WorldPos(-3, 0, -1),
-                            new WorldPos(-3, 0,  1), new WorldPos(-1, 0, -3), new WorldPos(-1, 0,  3), new WorldPos( 1, 0, -3), new WorldPos( 1, 0,  3),
-                            new WorldPos( 3, 0, -1), new WorldPos( 3, 0,  1), new WorldPos(-3, 0, -2), new WorldPos(-3, 0,  2), new WorldPos(-2, 0, -3),
-                            new WorldPos(-2, 0,  3), new WorldPos( 2, 0, -3), new WorldPos( 2, 0,  3), new WorldPos( 3, 0, -2), new WorldPos( 3, 0,  2),
-                            new WorldPos(-4, 0,  0), new WorldPos( 0, 0, -4), new WorldPos( 0, 0,  4), new WorldPos( 4, 0,  0), new WorldPos(-4, 0, -1),
-                            new WorldPos(-4, 0,  1), new WorldPos(-1, 0, -4), new WorldPos(-1, 0,  4), new WorldPos( 1, 0, -4), new WorldPos( 1, 0,  4),
-                            new WorldPos( 4, 0, -1), new WorldPos( 4, 0,  1), new WorldPos(-3, 0, -3), new WorldPos(-3, 0,  3), new WorldPos( 3, 0, -3),
-                            new WorldPos( 3, 0,  3), new WorldPos(-4, 0, -2), new WorldPos(-4, 0,  2), new WorldPos(-2, 0, -4), new WorldPos(-2, 0,  4),
-                            new WorldPos( 2, 0, -4), new WorldPos( 2, 0,  4), new WorldPos( 4, 0, -2), new WorldPos( 4, 0,  2), new WorldPos(-5, 0,  0),
-                            new WorldPos(-4, 0, -3), new WorldPos(-4, 0,  3), new WorldPos(-3, 0, -4), new WorldPos(-3, 0,  4), new WorldPos( 0, 0, -5),
-                            new WorldPos( 0, 0,  5), new WorldPos( 3, 0, -4), new WorldPos( 3, 0,  4), new WorldPos( 4, 0, -3), new WorldPos( 4, 0,  3),
-                            new WorldPos( 5, 0,  0), new WorldPos(-5, 0, -1), new WorldPos(-5, 0,  1), new WorldPos(-1, 0, -5), new WorldPos(-1, 0,  5),
-                            new WorldPos( 1, 0, -5), new WorldPos( 1, 0,  5), new WorldPos( 5, 0, -1), new WorldPos( 5, 0,  1), new WorldPos(-5, 0, -2),
-                            new WorldPos(-5, 0,  2), new WorldPos(-2, 0, -5), new WorldPos(-2, 0,  5), new WorldPos( 2, 0, -5), new WorldPos( 2, 0,  5),
-                            new WorldPos( 5, 0, -2), new WorldPos( 5, 0,  2), new WorldPos(-4, 0, -4), new WorldPos(-4, 0,  4), new WorldPos( 4, 0, -4),
-                            new WorldPos( 4, 0,  4), new WorldPos(-5, 0, -3), new WorldPos(-5, 0,  3), new WorldPos(-3, 0, -5), new WorldPos(-3, 0,  5),
-                            new WorldPos( 3, 0, -5), new WorldPos( 3, 0,  5), new WorldPos( 5, 0, -3), new WorldPos( 5, 0,  3), new WorldPos(-6, 0,  0),
-                            new WorldPos( 0, 0, -6), new WorldPos( 0, 0,  6), new WorldPos( 6, 0,  0), new WorldPos(-6, 0, -1), new WorldPos(-6, 0,  1),
-                            new WorldPos(-1, 0, -6), new WorldPos(-1, 0,  6), new WorldPos( 1, 0, -6), new WorldPos( 1, 0,  6), new WorldPos( 6, 0, -1),
-                            new WorldPos( 6, 0,  1), new WorldPos(-6, 0, -2), new WorldPos(-6, 0,  2), new WorldPos(-2, 0, -6), new WorldPos(-2, 0,  6),
-                            new WorldPos( 2, 0, -6), new WorldPos( 2, 0,  6), new WorldPos( 6, 0, -2), new WorldPos( 6, 0,  2), new WorldPos(-5, 0, -4),
-                            new WorldPos(-5, 0,  4), new WorldPos(-4, 0, -5), new WorldPos(-4, 0,  5), new WorldPos( 4, 0, -5), new WorldPos( 4, 0,  5),
-                            new WorldPos( 5, 0, -4), new WorldPos( 5, 0,  4), new WorldPos(-6, 0, -3), new WorldPos(-6, 0,  3), new WorldPos(-3, 0, -6),
-                            new WorldPos(-3, 0,  6), new WorldPos( 3, 0, -6), new WorldPos( 3, 0,  6), new WorldPos( 6, 0, -3), new WorldPos( 6, 0,  3),
-                            new WorldPos(-7, 0,  0), new WorldPos( 0, 0, -7), new WorldPos( 0, 0,  7), new WorldPos( 7, 0,  0), new WorldPos(-7, 0, -1),
-                            new WorldPos(-7, 0,  1), new WorldPos(-5, 0, -5), new WorldPos(-5, 0,  5), new WorldPos(-1, 0, -7), new WorldPos(-1, 0,  7),
-                            new WorldPos( 1, 0, -7), new WorldPos( 1, 0,  7), new WorldPos( 5, 0, -5), new WorldPos( 5, 0,  5), new WorldPos( 7, 0, -1),
-                            new WorldPos( 7, 0,  1), new WorldPos(-6, 0, -4), new WorldPos(-6, 0,  4), new WorldPos(-4, 0, -6), new WorldPos(-4, 0,  6),
-                            new WorldPos( 4, 0, -6), new WorldPos( 4, 0,  6), new WorldPos( 6, 0, -4), new WorldPos( 6, 0,  4), new WorldPos(-7, 0, -2),
-                            new WorldPos(-7, 0,  2), new WorldPos(-2, 0, -7), new WorldPos(-2, 0,  7), new WorldPos( 2, 0, -7), new WorldPos( 2, 0,  7),
-                            new WorldPos( 7, 0, -2), new WorldPos( 7, 0,  2), new WorldPos(-7, 0, -3), new WorldPos(-7, 0,  3), new WorldPos(-3, 0, -7),
-                            new WorldPos(-3, 0,  7), new WorldPos( 3, 0, -7), new WorldPos( 3, 0,  7), new WorldPos( 7, 0, -3), new WorldPos( 7, 0,  3),
-                            new WorldPos(-6, 0, -5), new WorldPos(-6, 0,  5), new WorldPos(-5, 0, -6), new WorldPos(-5, 0,  6), new WorldPos( 5, 0, -6),
-                            new WorldPos( 5, 0,  6), new WorldPos( 6, 0, -5), new WorldPos( 6, 0,  5) };*/
-
+    WorldPos previousPos;
 
     // Use this for initialization
     void Start()
     {
         world = GameObject.Find("World").GetComponent<World>();
+        reloadRenderLists = world.reloadRenderLists;
         List<Vector3> chunkList = new List<Vector3>();
-        /*
-        using (TextWriter tw = new StreamWriter("LongRenderDistance.txt"))
-        {
-            Debug.Log(string.Empty);
-            for (int i = -20; i < 20; i++)
-            {
-                for (int j = -20; j < 20; j++)
-                {
-                    for (int k = -20; k < 20; k++)
-                    {
-                        if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 16384)
-                            tw.WriteLine(i + " " + j + " " + k);
-                    }
-                }
-            }
-        }*/
+
+        if (reloadRenderLists) { RewriteChunkList(); }
+        
         List<WorldPos> closeChunkList = new List<WorldPos>();
-        using (StreamReader sr = File.OpenText("ShortRenderDistance.txt"))
+        using (StreamReader sr = File.OpenText(renderDistances[(int)world.renderDistance].filename))
         {
             string line;
             WorldPos closeChunkCoord;
@@ -112,7 +65,6 @@ public class LoadChunks : MonoBehaviour
     /// </summary>
     void FindChunksToLoad()
     {
-
         WorldPos playerPos = world.PosToChunk(transform.position);
 
         if(buildList.Count == 0)
@@ -132,6 +84,9 @@ public class LoadChunks : MonoBehaviour
                 buildList.Add(newChunkPos);
             }
         }
+        if (!Equals(playerPos, previousPos))
+            buildList.Clear();
+        previousPos = playerPos;
     }
 
     /// <summary>
@@ -161,13 +116,13 @@ public class LoadChunks : MonoBehaviour
     /// </summary>
     void DeleteChunks()
     {
-        if(timer == 10)
+        if (timer == 10)
         {
             List<WorldPos> chunksToDelete = new List<WorldPos>();
             foreach (var chunk in world.chunks)
             {
                 float distance = Vector3.SqrMagnitude(transform.position - world.ChunkToPos(chunk.Value.chunkCoords));
-                if (distance > 32786)
+                if (distance > renderDistances[(int)world.renderDistance].distance * 1.5f)
                     chunksToDelete.Add(chunk.Key);
             }
             foreach (WorldPos chunk in chunksToDelete)
@@ -175,5 +130,38 @@ public class LoadChunks : MonoBehaviour
             timer = 0;
         }
         timer++;
+    }
+
+
+    /// <summary>
+    /// When called writes the chunks in each render distance to text file
+    /// </summary>
+    void RewriteChunkList()
+    {
+        string[] renderDistanceFilenames = { "ShortRenderDistance.txt", "MediumRenderDistance.txt", "LongRenderDistance.txt" };
+        for (int renderDistances = 0; renderDistances < renderDistanceFilenames.Length; renderDistances++)
+        {
+            List<Vector3> chunkList = new List<Vector3>();
+            using (TextWriter tw = new StreamWriter(renderDistanceFilenames[renderDistances]))
+            {
+                Debug.Log(string.Empty);
+                for (int i = -40; i < 40; i++)
+                {
+                    for (int j = -40; j < 40; j++)
+                    {
+                        for (int k = -40; k < 40; k++)
+                        {
+                            if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 4096)
+                                chunkList.Add(new Vector3(i, j, k));
+                        }
+                    }
+                }
+                chunkList = chunkList.OrderBy(x => Vector3.Distance(Vector3.zero, world.ChunkToPos(x.ToWorldPos()))).ToList();
+                foreach (var chunk in chunkList)
+                {
+                    tw.WriteLine(Mathf.RoundToInt(chunk.x) + " " + Mathf.RoundToInt(chunk.y) + " " + Mathf.RoundToInt(chunk.z));
+                }
+            }
+        }
     }
 }
