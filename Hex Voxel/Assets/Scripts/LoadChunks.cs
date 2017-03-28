@@ -25,7 +25,6 @@ public class LoadChunks : MonoBehaviour
     {
         world = GameObject.Find("World").GetComponent<World>();
         reloadRenderLists = world.reloadRenderLists;
-        List<Vector3> chunkList = new List<Vector3>();
 
         if (reloadRenderLists) { RewriteChunkList(); }
         

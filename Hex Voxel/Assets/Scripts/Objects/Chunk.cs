@@ -267,7 +267,7 @@ public class Chunk : MonoBehaviour
         tris.AddRange(tempTempTri);
         verts.AddRange(temptempVert);
 
-        //BuildThirdSlant();
+        BuildThirdSlant(center);
     }
 
     void GetHitList(WorldPos center)
@@ -282,6 +282,33 @@ public class Chunk : MonoBehaviour
             }
             else
                 vertFail.Add(i);
+        }
+    }
+
+    void BuildThirdSlant(WorldPos center)
+    {
+        if (CheckHit(center.ToVector3()) && CheckHit(center.ToVector3() + hexPoints[1]) && 
+            CheckHit(center.ToVector3() - hexPoints[3] + hexPoints[5]) && 
+            CheckHit(center.ToVector3() + hexPoints[2] + hexPoints[5]) && World.thirdDiagonalActive)
+        {
+            int vertCount = verts.Count;
+            vertTemp.Clear();
+            vertTemp.Add(center.ToVector3());
+            vertTemp.Add(center.ToVector3() - hexPoints[3] + hexPoints[5]);
+            vertTemp.Add(center.ToVector3() + hexPoints[2] + hexPoints[5]);
+            vertTemp.Add(center.ToVector3());
+            vertTemp.Add(center.ToVector3() + hexPoints[2] + hexPoints[5]);
+            vertTemp.Add(center.ToVector3() + hexPoints[1]);
+            for (int i = 0; i < 6; i++)
+            {
+                verts.Add(vertTemp[i]);
+                tris.Add(vertCount + i);
+            }
+            for (int i = 0; i < 6; i++)
+            {
+                verts.Add(vertTemp[5 - i]);
+                tris.Add(vertCount + 6 + i);
+            }
         }
     }
     #endregion

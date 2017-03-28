@@ -86,7 +86,7 @@ public class Player : MonoBehaviour
     void CameraRotation()
     {
         currentMouse = Input.mousePosition;
-        if (oldMouse == null || oldMouse == Vector3.zero)
+        if (oldMouse == Vector3.zero)
         {
             oldMouse = Input.mousePosition;
             return;
