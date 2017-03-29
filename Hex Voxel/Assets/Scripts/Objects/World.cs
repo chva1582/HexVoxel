@@ -16,9 +16,9 @@ public class World : MonoBehaviour
     public static bool threePointActive = true, threeFaceReverse;
     public static bool thirdDiagonalActive = true, thirdDiagonalFaceReverse;
     
-    static float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
-    static float g = (2f / 3f) * Mathf.Sqrt(3);
-    static float h = Mathf.Sqrt(3);
+    public static readonly float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
+    public static readonly float g = (2f / 3f) * Mathf.Sqrt(3);
+    public static readonly float h = Mathf.Sqrt(3);
 
     static Vector3[] p2H = { new Vector3(1f / h, ((-1f) * g) / (f * h), 0),
         new Vector3(0, 1f / f, 0), new Vector3(1f / (2f * h), ((-1f) * g) / (2f * f * h), 1f / 2f) };
@@ -93,7 +93,7 @@ public class World : MonoBehaviour
     void Start()
     {
         if (!areaLoad)
-            CreateChunk(new WorldPos(0, -2, 0));
+            CreateChunk(new WorldPos(2, -1, 0));
         LookupTableConstruction();
     }
 

@@ -12,6 +12,7 @@ public class Chunk : MonoBehaviour
     public WorldPos chunkCoords;
     public bool update;
     public bool rendered = true;
+    public bool cornersReady;
     bool uniform;
 
     //Measurements
@@ -66,8 +67,9 @@ public class Chunk : MonoBehaviour
 
     public static float sqrt3 = Mathf.Sqrt(3);
 
-    public static Vector3[] neighborChunkCoords = { new Vector3(-1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, -1, 0),
-        new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(0, 0, 1) };
+    public static Vector3[] neighborChunkCoords = { new Vector3(-chunkSize * World.h, 0, 0), new Vector3(chunkSize * World.h, 0, 0),
+        new Vector3(0, -chunkHeight * World.f, 0), new Vector3(0, chunkHeight * World.f, 0),
+        new Vector3(0, 0, -2 * chunkSize), new Vector3(0, 0, 2 * chunkSize) };
 
     public static int[][] neighborChunkCorners = { new int[]{ 0,1,2,3}, new int[]{ 4,5,6,7}, new int[] {0,1,4,5},
         new int[] {2,3,6,7}, new int[] {0,2,4,6}, new int[] {1,3,5,7}};
@@ -84,17 +86,10 @@ public class Chunk : MonoBehaviour
 
     public void StartGeneration()
     {
-        float startTime = Time.realtimeSinceStartup;
-        uniform = false;
-        corners = new float[2, 2, 2];
-        cornerInitialized = new bool[2, 2, 2];
+        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+        ResetValues();
         FindNeighbors();
         FindCorners();
-        verts.Clear();
-        tris.Clear();
-        normals.Clear();
-        mesh.Clear();
-        vertexes = new bool[chunkSize, chunkHeight, chunkSize];
         if (!uniform)
             GenerateMesh(new Vector3(chunkSize, chunkHeight, chunkSize));
 
@@ -102,8 +97,18 @@ public class Chunk : MonoBehaviour
         if (meshRecalculate) { mesh.RecalculateNormals(); }
         filter.mesh = mesh;
         coll.sharedMesh = mesh;
-        
-        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+    }
+
+    void ResetValues()
+    {
+        uniform = false;
+        corners = new float[2, 2, 2];
+        cornerInitialized = new bool[2, 2, 2];
+        verts.Clear();
+        tris.Clear();
+        normals.Clear();
+        mesh.Clear();
+        vertexes = new bool[chunkSize, chunkHeight, chunkSize];
     }
 #endregion
 
@@ -151,7 +156,10 @@ public class Chunk : MonoBehaviour
     {
         for (int i = 0; i < 6; i++)
         {
-            if(neighbors[i] != null)
+            bool neighborExists = false;
+            try { neighborExists = neighbors[i].cornersReady; }
+            catch { neighborExists = false; }
+            if (neighborExists)
             {
                 for (int j = 0; j < 4; j++)
                 {
@@ -172,6 +180,7 @@ public class Chunk : MonoBehaviour
             if (!cornerInitialized[x, y, z])
                 corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
         }
+        cornersReady = true;
         CheckUniformity();
     }
     
@@ -208,7 +217,6 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-        //vertexes[0, 0, 0].BuildLookupTables();
 
         //Mesh Procedure
         List<Vector3> posVerts = new List<Vector3>();
@@ -343,7 +351,7 @@ public class Chunk : MonoBehaviour
 
     public bool Land(Vector3 point)
     {
-        return GetNoise(point)<threshold;
+        return GetInterp(point)<threshold;
     }
 
     /// <summary>
