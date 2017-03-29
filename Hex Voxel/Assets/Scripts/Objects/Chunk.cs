@@ -52,7 +52,6 @@ public class Chunk : MonoBehaviour
     
     //Other Options
     public bool meshRecalculate;
-    float startTime;
     #endregion
 
     #region Calculated Lists
@@ -67,8 +66,10 @@ public class Chunk : MonoBehaviour
 
     public static float sqrt3 = Mathf.Sqrt(3);
 
-    public static Vector3[] neighborChunkCoords = { new Vector3(-chunkSize * World.h, 0, 0), new Vector3(chunkSize * World.h, 0, 0),
-        new Vector3(0, -chunkHeight * World.f, 0), new Vector3(0, chunkHeight * World.f, 0),
+    public static Vector3[] neighborChunkCoords = { new Vector3(-chunkSize * World.h, 0, chunkSize),
+        new Vector3(chunkSize * World.h, 0, -chunkSize),
+        new Vector3(-chunkHeight * World.g, -chunkHeight * World.f, 0),
+        new Vector3(chunkHeight * World.g, chunkHeight * World.f, 0),
         new Vector3(0, 0, -2 * chunkSize), new Vector3(0, 0, 2 * chunkSize) };
 
     public static int[][] neighborChunkCorners = { new int[]{ 0,1,2,3}, new int[]{ 4,5,6,7}, new int[] {0,1,4,5},
@@ -164,7 +165,7 @@ public class Chunk : MonoBehaviour
                 for (int j = 0; j < 4; j++)
                 {
                     int cornerIndex = neighborChunkCorners[i][j];
-                    int x = cornerIndex < 4 ? 1 : 0;
+                    int x = cornerIndex >= 4 ? 1 : 0;
                     int y = cornerIndex / 2 % 2 == 1 ? 1 : 0;
                     int z = cornerIndex % 2 == 1 ? 1 : 0;
                     corners[x, y, z] = neighbors[i].corners[i < 2 ? (x == 1 ? 0 : 1) : x, (i == 2 || i == 3) ? (y == 1 ? 0 : 1) : y, i > 3 ? (z == 1 ? 0 : 1) : z];
