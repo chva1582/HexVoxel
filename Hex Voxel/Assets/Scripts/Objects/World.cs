@@ -93,7 +93,10 @@ public class World : MonoBehaviour
     void Start()
     {
         if (!areaLoad)
-            CreateChunk(new WorldPos(2, -1, 0));
+        {
+            CreateChunk(new WorldPos(0, -2, 0));
+            CreateChunk(new WorldPos(1, -2, 0));
+        }
         LookupTableConstruction();
     }
 
@@ -151,7 +154,10 @@ public class World : MonoBehaviour
         if (chunks.TryGetValue(chunkCoord, out output))
             return output;
         else
+        {
             return null;
+        }
+            
     }
 
     /// <summary>

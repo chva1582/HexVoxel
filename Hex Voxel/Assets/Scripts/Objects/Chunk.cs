@@ -40,6 +40,7 @@ public class Chunk : MonoBehaviour
     bool pointsReady;
     bool[,,] vertexes = new bool[chunkSize, chunkHeight, chunkSize];
     Chunk[] neighbors = new Chunk[6];
+    bool[] neighborExists = new bool[6];
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
@@ -98,6 +99,28 @@ public class Chunk : MonoBehaviour
         if (meshRecalculate) { mesh.RecalculateNormals(); }
         filter.mesh = mesh;
         coll.sharedMesh = mesh;
+
+        Vector3 truePos = HexToPos(new WorldPos(-1,4,7));
+        Chunk neighbor = world.GetChunk(truePos);
+        if (neighbor != null)
+        {
+            if (neighbor.vertexes[7, 5, 2])
+                print(new Vector3(7, 5, 2).ToString());
+        }
+        //if (neighbor != null)
+        //{
+        //    for (int i = 0; i < 8; i++)
+        //    {
+        //        for (int j = 0; j < 8; j++)
+        //        {
+        //            for (int k = 0; k < 8; k++)
+        //            {
+        //                if (neighbor.vertexes[i,j,k])
+        //                    print(new Vector3(i, j, k).ToString());
+        //            }
+        //        }
+        //    }
+        //}
     }
 
     void ResetValues()
@@ -157,10 +180,9 @@ public class Chunk : MonoBehaviour
     {
         for (int i = 0; i < 6; i++)
         {
-            bool neighborExists = false;
-            try { neighborExists = neighbors[i].cornersReady; }
-            catch { neighborExists = false; }
-            if (neighborExists)
+            try { neighborExists[i] = neighbors[i].cornersReady; }
+            catch { neighborExists[i] = false; }
+            if (neighborExists[i])
             {
                 for (int j = 0; j < 4; j++)
                 {
@@ -208,13 +230,13 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-        for (int i = 0; i < size.x; i++)
+        for (int i = neighborExists[0] ? -1 : 1; i < (neighborExists[1] ? size.x + 1 : size.x - 1); i++)
         {
-            for (int j = 0; j < size.y; j++)
+            for (int j = neighborExists[2] ? -1 : 1; j < (neighborExists[3] ? size.y + 1 : size.y - 1); j++)
             {
-                for (int k = 0; k < size.z; k++)
+                for (int k = neighborExists[4] ? -1 : 0; k < (neighborExists[5] ? size.z : size.z - 1); k++)
                 {
-                    Build(new WorldPos(i,j,k));
+                    Build(new WorldPos(i, j, k));
                 }
             }
         }
@@ -375,15 +397,15 @@ public class Chunk : MonoBehaviour
         float yD = (pos.y - low.y) / (high.y - low.y);
         float zD = (pos.z - low.z) / (high.z - low.z);
 
-        float c00 = corners[0, 0, 0] * (1 - xD) + corners[1, 0, 0] * xD;
-        float c01 = corners[0, 0, 1] * (1 - xD) + corners[1, 0, 1] * xD;
-        float c10 = corners[0, 1, 0] * (1 - xD) + corners[1, 1, 0] * xD;
-        float c11 = corners[0, 1, 1] * (1 - xD) + corners[1, 1, 1] * xD;
+        float c00 = Mathf.SmoothStep(corners[0, 0, 0], corners[1, 0, 0], xD);
+        float c01 = Mathf.SmoothStep(corners[0, 0, 1], corners[1, 0, 1], xD);
+        float c10 = Mathf.SmoothStep(corners[0, 1, 0], corners[1, 1, 0], xD);
+        float c11 = Mathf.SmoothStep(corners[0, 1, 1], corners[1, 1, 1], xD);
 
-        float c0 = c00 * (1 - yD) + c10 * yD;
-        float c1 = c01 * (1 - yD) + c11 * yD;
+        float c0 = Mathf.SmoothStep(c00, c10, yD);
+        float c1 = Mathf.SmoothStep(c01, c11, yD);
 
-        float c = c0 * (1 - zD) + c1 * zD;
+        float c = Mathf.SmoothStep(c0, c1, zD);
         return c;
     }
 
@@ -409,7 +431,17 @@ public class Chunk : MonoBehaviour
         if (point.x < chunkSize && point.x > -1 && point.y < chunkHeight && point.y > -1 && point.z < chunkSize && point.z > -1)
             output = vertexes[(int)(point.x + .5f), (int)(point.y + .5f), (int)(point.z + .5f)];
         else
-            output = world.CheckHit(HexToPos(point.ToWorldPos()));
+        {
+            try
+            {
+                Vector3 truePos = HexToPos(point.ToWorldPos());
+                Chunk neighbor = world.GetChunk(truePos);
+                Vector3 hex = neighbor.PosToHex(truePos);
+                output = neighbor.vertexes[(int)(hex.x + .1f), (int)(hex.y + .1f), (int)(hex.z + .1f)];
+            }
+            catch {  output = world.CheckHit(HexToPos(point.ToWorldPos())); print(point.ToWorldPos()); }
+        }
+        
         return output;
     }
 
