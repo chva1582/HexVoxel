@@ -44,6 +44,7 @@ public class Chunk : MonoBehaviour
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
+    public Vector3[,,] cornerNormals = new Vector3[2, 2, 2];
     public bool[,,] cornerInitialized = new bool[2, 2, 2];
 
     //Noise Parameters
@@ -102,11 +103,6 @@ public class Chunk : MonoBehaviour
 
         Vector3 truePos = HexToPos(new WorldPos(-1,4,7));
         Chunk neighbor = world.GetChunk(truePos);
-        if (neighbor != null)
-        {
-            if (neighbor.vertexes[7, 5, 2])
-                print(new Vector3(7, 5, 2).ToString());
-        }
         //if (neighbor != null)
         //{
         //    for (int i = 0; i < 8; i++)
@@ -191,6 +187,7 @@ public class Chunk : MonoBehaviour
                     int y = cornerIndex / 2 % 2 == 1 ? 1 : 0;
                     int z = cornerIndex % 2 == 1 ? 1 : 0;
                     corners[x, y, z] = neighbors[i].corners[i < 2 ? (x == 1 ? 0 : 1) : x, (i == 2 || i == 3) ? (y == 1 ? 0 : 1) : y, i > 3 ? (z == 1 ? 0 : 1) : z];
+                    cornerNormals[x, y, z] = neighbors[i].cornerNormals[i < 2 ? (x == 1 ? 0 : 1) : x, (i == 2 || i == 3) ? (y == 1 ? 0 : 1) : y, i > 3 ? (z == 1 ? 0 : 1) : z];
                     cornerInitialized[x, y, z] = true;
                 }
             }
@@ -201,7 +198,10 @@ public class Chunk : MonoBehaviour
             int y = i / 2 % 2 == 1 ? 1 : 0;
             int z = i % 2 == 1 ? 1 : 0;
             if (!cornerInitialized[x, y, z])
+            {
                 corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
+                cornerNormals[x, y, z] = GetNormal(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
+            }
         }
         cornersReady = true;
         CheckUniformity();
@@ -245,6 +245,7 @@ public class Chunk : MonoBehaviour
         List<Vector3> posVerts = new List<Vector3>();
         foreach (Vector3 hex in verts)
         {
+            normals.Add(Procedural.Noise.noiseMethods[0][2](hex, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0));
             Vector3 offset = Vector3.zero;
             Vector3 smooth = Vector3.zero;
             if (world.offsetLand)
@@ -365,16 +366,16 @@ public class Chunk : MonoBehaviour
         //float z = point.z;
         Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative*20 + new Vector3(0, thresDropOff, 0);
         //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
-        gradient = gradient.normalized * sqrt3/2;
-        WorldPos hexPos = new WorldPos(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Mathf.RoundToInt(point.z));
-        if (!Land(PosToHex(HexToPos(hexPos) + gradient)) && Land(PosToHex(HexToPos(hexPos) - gradient)))
+        gradient = gradient.normalized;
+        Vector3 hexPos = new Vector3(point.x, point.y, point.z);
+        if (!Land(hexPos + world.PosToHex(gradient)) && Land(hexPos - world.PosToHex(gradient)))
             return true;
         return false;
     }
-
+    
     public bool Land(Vector3 point)
     {
-        return GetInterp(point)<threshold;
+        return GetNoise(point)<threshold;
     }
 
     /// <summary>
@@ -397,15 +398,36 @@ public class Chunk : MonoBehaviour
         float yD = (pos.y - low.y) / (high.y - low.y);
         float zD = (pos.z - low.z) / (high.z - low.z);
 
-        float c00 = Mathf.SmoothStep(corners[0, 0, 0], corners[1, 0, 0], xD);
-        float c01 = Mathf.SmoothStep(corners[0, 0, 1], corners[1, 0, 1], xD);
-        float c10 = Mathf.SmoothStep(corners[0, 1, 0], corners[1, 1, 0], xD);
-        float c11 = Mathf.SmoothStep(corners[0, 1, 1], corners[1, 1, 1], xD);
+        float c00 = Mathf.Lerp(corners[0, 0, 0], corners[1, 0, 0], xD);
+        float c01 = Mathf.Lerp(corners[0, 0, 1], corners[1, 0, 1], xD);
+        float c10 = Mathf.Lerp(corners[0, 1, 0], corners[1, 1, 0], xD);
+        float c11 = Mathf.Lerp(corners[0, 1, 1], corners[1, 1, 1], xD);
 
-        float c0 = Mathf.SmoothStep(c00, c10, yD);
-        float c1 = Mathf.SmoothStep(c01, c11, yD);
+        float c0 = Mathf.Lerp(c00, c10, yD);
+        float c1 = Mathf.Lerp(c01, c11, yD);
 
-        float c = Mathf.SmoothStep(c0, c1, zD);
+        float c = Mathf.Lerp(c0, c1, zD);
+        return c;
+    }
+
+    public Vector3 GetNormalInterp(Vector3 pos)
+    {
+        Vector3 low = HexOffset;
+        Vector3 high = HexOffset + new Vector3(chunkSize, chunkHeight, chunkSize);
+
+        float xD = (pos.x - low.x) / (high.x - low.x);
+        float yD = (pos.y - low.y) / (high.y - low.y);
+        float zD = (pos.z - low.z) / (high.z - low.z);
+
+        Vector3 c00 = Vector3.Lerp(cornerNormals[0, 0, 0], cornerNormals[1, 0, 0], xD);
+        Vector3 c01 = Vector3.Lerp(cornerNormals[0, 0, 1], cornerNormals[1, 0, 1], xD);
+        Vector3 c10 = Vector3.Lerp(cornerNormals[0, 1, 0], cornerNormals[1, 1, 0], xD);
+        Vector3 c11 = Vector3.Lerp(cornerNormals[0, 1, 1], cornerNormals[1, 1, 1], xD);
+
+        Vector3 c0 = Vector3.Lerp(c00, c10, yD);
+        Vector3 c1 = Vector3.Lerp(c01, c11, yD);
+
+        Vector3 c = Vector3.Lerp(c0, c1, zD);
         return c;
     }
 
@@ -439,7 +461,7 @@ public class Chunk : MonoBehaviour
                 Vector3 hex = neighbor.PosToHex(truePos);
                 output = neighbor.vertexes[(int)(hex.x + .1f), (int)(hex.y + .1f), (int)(hex.z + .1f)];
             }
-            catch {  output = world.CheckHit(HexToPos(point.ToWorldPos())); print(point.ToWorldPos()); }
+            catch {  output = world.CheckHit(HexToPos(point.ToWorldPos())); }
         }
         
         return output;

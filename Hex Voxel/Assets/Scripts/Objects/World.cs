@@ -94,8 +94,8 @@ public class World : MonoBehaviour
     {
         if (!areaLoad)
         {
-            CreateChunk(new WorldPos(0, -2, 0));
-            CreateChunk(new WorldPos(1, -2, 0));
+            CreateChunk(new WorldPos(3, -3, 3));
+            CreateChunk(new WorldPos(3, -2, 3));
         }
         LookupTableConstruction();
     }
@@ -183,12 +183,20 @@ public class World : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool CheckHit(Vector3 pos)
     {
-        Vector3 hex = PosToHex(pos);
-        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex, Chunk.noiseScale).derivative*20 + new Vector3(0, Chunk.thresDropOff, 0);
-        gradient = gradient.normalized * Chunk.sqrt3/2;
-        if (!Land(PosToHex(HexToPos(hex) + gradient)) && Land(PosToHex(HexToPos(hex) - gradient)))
-            return true;
-        return false;
+        try
+        {
+            Chunk chunk = GetChunk(pos);
+            return chunk.CheckHit(chunk.PosToHex(pos));
+        }
+        catch
+        {
+            Vector3 hex = PosToHex(pos);
+            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex, Chunk.noiseScale).derivative * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            gradient = gradient.normalized;
+            if (!Land(PosToHex(HexToPos(hex) + gradient)) && Land(PosToHex(HexToPos(hex) - gradient)))
+                return true;
+            return false;
+        }
     }
 
     bool Land(Vector3 point)

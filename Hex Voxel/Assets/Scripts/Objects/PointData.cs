@@ -32,8 +32,8 @@ public class PointData : MonoBehaviour
         }
         if(world.debugMode == DebugMode.Gradient)
         {
-            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative*20 + new Vector3(0, Chunk.thresDropOff, 0);
-            gradient = gradient.normalized * Chunk.sqrt3/2;
+            Vector3 gradient = chunk.GetNormalInterp(chunk.PosToHex(pos));//Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative*20 + new Vector3(0, Chunk.thresDropOff, 0);
+            gradient = gradient.normalized;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos, pos + gradient);
             Gizmos.color = Color.blue;
