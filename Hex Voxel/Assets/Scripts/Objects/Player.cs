@@ -22,23 +22,28 @@ public class Player : MonoBehaviour
     {
         body = gameObject.GetComponent<Rigidbody>();
         cameraTransform = transform.GetChild(0).transform;
+        Cursor.lockState = CursorLockMode.Locked;
 	}
-	
-	// Update is called once per frame
-	void Update ()
+
+    // Update is called once per frame
+    void Update()
     {
         MovementControl();
         TimerCheck();
-        if (Input.GetButton("Fire2"))
-            CameraRotation();
-        else
-            oldMouse = Vector3.zero;
-        if (playerMovement == PlayerMovement.Flying)
-            body.useGravity = false;
-        else
-            body.useGravity = true;
-    }
+        if (Input.GetButton("Fire1"))
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 5))
+                print(hit.point.ToString());
+        }
 
+        body.useGravity = !(playerMovement == PlayerMovement.Flying);
+
+        if (Input.GetKeyDown(KeyCode.P))
+            Cursor.lockState = ((Cursor.lockState == CursorLockMode.Locked) ? CursorLockMode.None : CursorLockMode.Locked);
+        if(Cursor.lockState == CursorLockMode.Locked)
+            CameraRotation();
+    }
     void OnCollisionStay(Collision collision)
     {
         if (collision.gameObject.tag == "Ground")
@@ -91,9 +96,11 @@ public class Player : MonoBehaviour
             oldMouse = Input.mousePosition;
             return;
         }
-        transform.Rotate(new Vector3(0, (oldMouse.x - currentMouse.x) * rotationalSpeed, 0));
+        transform.Rotate(new Vector3(0, Input.GetAxis("Mouse X") * rotationalSpeed, 0));
         Vector3 oldCamera = cameraTransform.localRotation.eulerAngles;
-        cameraTransform.Rotate(new Vector3((oldMouse.y - currentMouse.y) * -0.5f * rotationalSpeed, 0, 0));
+        float xRot = cameraTransform.rotation.eulerAngles.x > 180 ? cameraTransform.rotation.eulerAngles.x - 360 : cameraTransform.rotation.eulerAngles.x;
+        if(!(xRot > 80 && (Input.GetAxis("Mouse Y") < 0)) && !(xRot < -80 && (Input.GetAxis("Mouse Y") > 0)))
+            cameraTransform.Rotate(new Vector3(Input.GetAxis("Mouse Y") * -0.5f * rotationalSpeed, 0, 0));
         oldMouse = Input.mousePosition;
 
     }

@@ -248,18 +248,18 @@ public class Chunk : MonoBehaviour
             normals.Add(Procedural.Noise.noiseMethods[0][2](hex, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0));
             Vector3 offset = Vector3.zero;
             Vector3 smooth = Vector3.zero;
-            if (world.offsetLand)
-                offset = .5f * GetNormal(HexToPos(hex.ToWorldPos())*50) + 2 * GetNormal(HexToPos(hex.ToWorldPos()) * 3);
-            if(world.smoothLand)
+            if (world.smoothLand)
             {
                 Vector3 point = hex + HexOffset;
                 Vector3 norm = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
-                norm = norm.normalized * sqrt3/2;
+                norm = norm.normalized * sqrt3 / 2;
                 float A = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) + norm));
                 float B = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) - norm));
                 float T = 0;
-                smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B)/2) * -sqrt3 / 2;
+                smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
             }
+            if (world.offsetLand)
+                offset = .5f * GetNormal((HexToPos(hex.ToWorldPos())+smooth)*50) + 2 * GetNormal((HexToPos(hex.ToWorldPos())+smooth) * 3);
             posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
         }
         mesh.SetVertices(posVerts);
