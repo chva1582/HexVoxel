@@ -42,6 +42,10 @@ public class Chunk : MonoBehaviour
     Chunk[] neighbors = new Chunk[6];
     bool[] neighborExists = new bool[6];
 
+    //Edited Points
+    float[,,] editedValues = new float[chunkSize, chunkHeight, chunkSize];
+    Vector3[,,] editedNormals = new Vector3[chunkSize, chunkHeight, chunkSize];
+
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
     public Vector3[,,] cornerNormals = new Vector3[2, 2, 2];
@@ -84,13 +88,19 @@ public class Chunk : MonoBehaviour
         filter = gameObject.GetComponent<MeshFilter>();
         coll = gameObject.GetComponent<MeshCollider>();
         mesh = new Mesh();
+        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+        StartGeneration();
+    }
+
+    public void RebuildChunk()
+    {
+        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+        ResetValues();
         StartGeneration();
     }
 
     public void StartGeneration()
     {
-        gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
-        ResetValues();
         FindNeighbors();
         FindCorners();
         if (!uniform)
@@ -163,6 +173,9 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region Face Construction
+    /// <summary>
+    /// Finds the neighboring Chunks if they exist. Used for interpolation and corner sharing
+    /// </summary>
     void FindNeighbors()
     {
         for (int i = 0; i < 6; i++)
@@ -172,6 +185,9 @@ public class Chunk : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Finds the value of the corners of the Chunk and saves the for use in the interpolation
+    /// </summary>
     void FindCorners()
     {
         for (int i = 0; i < 6; i++)
@@ -210,8 +226,19 @@ public class Chunk : MonoBehaviour
     /// <summary>
     /// Creates mesh
     /// </summary>
-    /// <param name="wid">Width of points to be generated</param>
+    /// <param name="size">Vector3 of the Chunk size to be generated</param>
     void GenerateMesh(Vector3 size)
+    {
+        VertexWrite(size);
+        FaceConstruction(size);
+        MeshProcedure();
+    }
+
+    /// <summary>
+    /// Writes a boolean array of which points are active
+    /// </summary>
+    /// <param name="size">Vector3 of the Chunk size to be generated</param>
+    void VertexWrite(Vector3 size)
     {
         for (int i = 0; i < size.x; i++)
         {
@@ -223,13 +250,21 @@ public class Chunk : MonoBehaviour
                     Vector3 shiftedCenter = center + HexOffset;
                     if (GradientCheck(shiftedCenter))
                     {
-                        vertexes[i,j,k] = true;
-                        if(world.pointMode == PointMode.Gradient) { CreatePoint(center); }
+                        vertexes[i, j, k] = true;
+                        if (world.pointMode == PointMode.Gradient) { CreatePoint(center); }
                     }
                     if (world.pointMode == PointMode.All) { CreatePoint(center); }
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Creates the faces in the Chunk 
+    /// </summary>
+    /// <param name="size">Vector3 of the Chunk size to be generated</param>
+    void FaceConstruction(Vector3 size)
+    {
         for (int i = neighborExists[0] ? -1 : 1; i < (neighborExists[1] ? size.x + 1 : size.x - 1); i++)
         {
             for (int j = neighborExists[2] ? -1 : 1; j < (neighborExists[3] ? size.y + 1 : size.y - 1); j++)
@@ -240,33 +275,12 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-
-        //Mesh Procedure
-        List<Vector3> posVerts = new List<Vector3>();
-        foreach (Vector3 hex in verts)
-        {
-            normals.Add(Procedural.Noise.noiseMethods[0][2](hex, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0));
-            Vector3 offset = Vector3.zero;
-            Vector3 smooth = Vector3.zero;
-            if (world.smoothLand)
-            {
-                Vector3 point = hex + HexOffset;
-                Vector3 norm = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
-                norm = norm.normalized * sqrt3 / 2;
-                float A = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) + norm));
-                float B = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) - norm));
-                float T = 0;
-                smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
-            }
-            if (world.offsetLand)
-                offset = .5f * GetNormal((HexToPos(hex.ToWorldPos())+smooth)*50) + 2 * GetNormal((HexToPos(hex.ToWorldPos())+smooth) * 3);
-            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
-        }
-        mesh.SetVertices(posVerts);
-        mesh.SetTriangles(tris, 0);
-        mesh.SetNormals(normals);
     }
 
+    /// <summary>
+    /// Builds the faces at a single Octahedron
+    /// </summary>
+    /// <param name="center">0-point of the octahedron to be built</param>
     void Build(WorldPos center)
     {
         vertTemp = new List<Vector3>();
@@ -302,6 +316,10 @@ public class Chunk : MonoBehaviour
         BuildThirdSlant(center);
     }
 
+    /// <summary>
+    /// Find a list of the hits for the other points of the octahedron
+    /// </summary>
+    /// <param name="center">0-point of the octahedron to be built</param>
     void GetHitList(WorldPos center)
     {
         for (int i = 0; i < 6; i++)
@@ -317,6 +335,11 @@ public class Chunk : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Construct the Third Slant of each Octahedron if necessary
+    /// The Third Slant is the only missing face from the Octahedron scheme
+    /// </summary>
+    /// <param name="center">0-point of the octahedron to be built</param>
     void BuildThirdSlant(WorldPos center)
     {
         if (CheckHit(center.ToVector3()) && CheckHit(center.ToVector3() + hexPoints[1]) && 
@@ -343,13 +366,76 @@ public class Chunk : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Send mesh data to the mesh and apply after affects
+    /// </summary>
+    void MeshProcedure()
+    {
+        List<Vector3> posVerts = new List<Vector3>();
+        foreach (Vector3 hex in verts)
+        {
+            normals.Add(Procedural.Noise.noiseMethods[0][2](hex, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0));
+            Vector3 offset = Vector3.zero;
+            Vector3 smooth = Vector3.zero;
+            if (world.smoothLand)
+            {
+                Vector3 point = hex + HexOffset;
+                Vector3 norm = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+                norm = norm.normalized * sqrt3 / 2;
+                float A = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) + norm));
+                float B = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) - norm));
+                float T = 0;
+                smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
+            }
+            if (world.offsetLand)
+                offset = .5f * GetNormal((HexToPos(hex.ToWorldPos()) + smooth) * 50) + 2 * GetNormal((HexToPos(hex.ToWorldPos()) + smooth) * 3);
+            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
+        }
+        mesh.SetVertices(posVerts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetNormals(normals);
+    }
     #endregion
 
     #region Update Mechanisms
+    /// <summary>
+    /// Request the update of a Chunk
+    /// </summary>
+    /// <returns>Success of update</returns>
     public bool UpdateChunk()
     {
+        verts.Clear();
+        tris.Clear();
+        normals.Clear();
         rendered = true;
         return true;
+    }
+
+    public void EditPointValue(WorldPos coord, float change)
+    {
+        update = false;
+        try
+        {
+            editedValues[coord.x, coord.y, coord.z] += change;
+        }
+        catch 
+        {
+            
+        }
+    }
+
+    public void EditPointNormal(WorldPos coord, Vector3 change)
+    {
+        update = false;
+        try
+        {
+            editedNormals[coord.x, coord.y, coord.z] += change;
+        }
+        catch
+        {
+            
+        }
     }
     #endregion
 
