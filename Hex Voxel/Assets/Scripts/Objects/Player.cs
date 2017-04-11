@@ -1,9 +1,12 @@
-﻿using UnityEngine;
+﻿//Controls for the Player Avatar
+//Assigned to the Player GameObject
+using UnityEngine;
 
-public enum PlayerMovement {Ground , Frozen, Flying };
+public enum PlayerMovement {Ground, Frozen, Flying };
 
 public class Player : MonoBehaviour
 {
+    #region Instantiation
     Rigidbody body;
     public PlayerMovement playerMovement;
     public World world;
@@ -14,9 +17,11 @@ public class Player : MonoBehaviour
     int timer;
 
     Transform cameraTransform;
+    #endregion
 
-	// Use this for initialization
-	void Start ()
+    #region Start & Update
+    // Use this for initialization
+    void Start ()
     {
         body = gameObject.GetComponent<Rigidbody>();
         cameraTransform = transform.GetChild(0).transform;
@@ -43,18 +48,6 @@ public class Player : MonoBehaviour
             CameraRotation();
     }
 
-    void OnCollisionStay(Collision collision)
-    {
-        if (collision.gameObject.tag == "Ground")
-            groundContact = true;
-    }
-
-    void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.tag == "Ground")
-            groundContact = false;
-    }
-
     void TimerCheck()
     {
         if (timer == 100)
@@ -70,7 +63,23 @@ public class Player : MonoBehaviour
         else if (timer < 100)
             timer++;
     }
+    #endregion
 
+    #region Collision
+    void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.tag == "Ground")
+            groundContact = true;
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.tag == "Ground")
+            groundContact = false;
+    }
+    #endregion
+
+    #region Controls
     void PointEdit()
     {
         RaycastHit hit;
@@ -78,8 +87,8 @@ public class Player : MonoBehaviour
         {
             print(hit.point.ToString());
             Chunk chunk = world.GetChunk(hit.point);
-            Vector3 hexUnrounded = chunk.PosToHex(hit.point);
-            WorldPos hexCenter = new WorldPos((int)hexUnrounded.x, (int)hexUnrounded.y, (int)hexUnrounded.z);
+            HexCoord hexUnrounded = chunk.PosToHex(hit.point);
+            HexCell hexCenter = hexUnrounded.ToHexCell();
             for (int i = -2; i <= 2; i++)
             {
                 for (int j = -2; j <= 2; j++)
@@ -87,9 +96,9 @@ public class Player : MonoBehaviour
                     for (int k = -2; k <= 2; k++)
                     {
 
-                        WorldPos hex = new WorldPos(hexCenter.x + i, hexCenter.y + j, hexCenter.z + k);
+                        HexCell hex = new HexCell(hexCenter.x + i, hexCenter.y + j, hexCenter.z + k);
                         Vector3 point = chunk.HexToPos(hex);
-                        Vector3 c = point - hex.ToVector3();
+                        Vector3 c = point - hexUnrounded.ToVector3();
                         float distanceStrength = 1 / (Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2));
                         Vector3 changeNormal = new Vector3(-2 * c.x / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)),
                             -2 * c.y / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)),
@@ -126,4 +135,5 @@ public class Player : MonoBehaviour
         if(!(xRot > 80 && (Input.GetAxis("Mouse Y") < 0)) && !(xRot < -80 && (Input.GetAxis("Mouse Y") > 0)))
             cameraTransform.Rotate(new Vector3(Input.GetAxis("Mouse Y") * -0.5f * rotationalSpeed, 0, 0));
     }
+    #endregion
 }

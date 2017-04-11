@@ -1,13 +1,12 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿//Identifier Coordinate of each Chunk
 using System;
 
 [Serializable]
-public struct WorldPos
+public struct ChunkCoord
 {
     public int x, y, z;
 
-    public WorldPos(int x, int y, int z)
+    public ChunkCoord(int x, int y, int z)
     {
         this.x = x;
         this.y = y;
@@ -33,18 +32,9 @@ public struct WorldPos
         }
     }
 
-    public static WorldPos operator +(WorldPos w1, WorldPos w2)
+    public static ChunkCoord operator +(ChunkCoord w1, ChunkCoord w2)
     {
-        return new WorldPos(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
-    }
-
-    public Vector3 ToVector3()
-    {
-        Vector3 output = new Vector3();
-        output.x = x;
-        output.y = y;
-        output.z = z;
-        return output;
+        return new ChunkCoord(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
     }
 
     public override string ToString()

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿//A group of points of square size organized in octahedral coordinates
+using UnityEngine;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(MeshFilter))]
@@ -9,7 +10,7 @@ public class Chunk : MonoBehaviour
 {
     #region Control Variables
     //General Info
-    public WorldPos chunkCoords;
+    public ChunkCoord chunkCoords;
     public bool update;
     public bool rendered = true;
     public bool cornersReady;
@@ -17,34 +18,35 @@ public class Chunk : MonoBehaviour
 
     //Measurements
     public static int chunkSize = 8;
-    public static int chunkHeight = 8;
 
     //Components
-    public Vector3 HexOffset { get { return new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize); } }
-    public Vector3 PosOffset { get { return world.HexToPos(new Vector3(chunkCoords.x * chunkSize, chunkCoords.y * chunkHeight, chunkCoords.z * chunkSize)); } }
+    public HexWorldCoord HexOffset { get { return new HexWorldCoord(chunkCoords.x * chunkSize, chunkCoords.y * chunkSize, chunkCoords.z * chunkSize); } }
+    public Vector3 PosOffset { get { return world.HexToPos(new HexWorldCoord(chunkCoords.x * chunkSize, chunkCoords.y * chunkSize, chunkCoords.z * chunkSize)); } }
     MeshFilter filter;
     MeshCollider coll;
     Mesh mesh;
 
-    List<Vector3> verts = new List<Vector3>();
+    //Geometry
+    List<HexCell> verts = new List<HexCell>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
-    List<Vector3> vertTemp = new List<Vector3>();
+    List<HexCell> vertTemp = new List<HexCell>();
     List<int> vertFail = new List<int>();
     List<int> vertSuccess = new List<int>();
 
+    //Public Objects
     public World world;
     public GameObject dot;
 
     //Storage
     bool pointsReady;
-    bool[,,] vertexes = new bool[chunkSize, chunkHeight, chunkSize];
+    bool[,,] vertexes = new bool[chunkSize, chunkSize, chunkSize];
     Chunk[] neighbors = new Chunk[6];
     bool[] neighborExists = new bool[6];
 
     //Edited Points
-    float[,,] editedValues = new float[chunkSize, chunkHeight, chunkSize];
-    Vector3[,,] editedNormals = new Vector3[chunkSize, chunkHeight, chunkSize];
+    float[,,] editedValues = new float[chunkSize, chunkSize, chunkSize];
+    Vector3[,,] editedNormals = new Vector3[chunkSize, chunkSize, chunkSize];
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
@@ -61,28 +63,35 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region Calculated Lists
-
+    //Location of octahedron points in real space
     public static Vector3[] tetraPoints = { new Vector3(0, 0, 0), new Vector3(Mathf.Sqrt(3), 0, 1),
         new Vector3(0, 0, 2), new Vector3(Mathf.Sqrt(3), 0, -1),
         new Vector3(Mathf.Sqrt(3)-(2*Mathf.Sqrt(3) / 3), -2 * Mathf.Sqrt(1-Mathf.Sqrt(3)/3), 1),
         new Vector3(2 * Mathf.Sqrt(3) / 3, 2 * Mathf.Sqrt(1 - Mathf.Sqrt(3) / 3), 0) };
 
-    public static Vector3[] hexPoints = {new Vector3(0,0,0), new Vector3(1,0,1), new Vector3(0,0,1),
-        new Vector3(1,0,0),new Vector3(1,-1,1), new Vector3(0,1,0), new Vector3(-1,1,0), new Vector3(0,1,1)};
+    //Location of octahedron points in hexagonal coordiantes
+    public static HexCell[] hexPoints = {new HexCell(0,0,0), new HexCell(1,0,1), new HexCell(0,0,1),
+        new HexCell(1,0,0),new HexCell(1,-1,1), new HexCell(0,1,0), new HexCell(-1,1,0), new HexCell(0,1,1)};
 
+    //Shortcut Math
     public static float sqrt3 = Mathf.Sqrt(3);
 
+    //Array of Neighboring Chunk's coordinates
     public static Vector3[] neighborChunkCoords = { new Vector3(-chunkSize * World.h, 0, chunkSize),
         new Vector3(chunkSize * World.h, 0, -chunkSize),
-        new Vector3(-chunkHeight * World.g, -chunkHeight * World.f, 0),
-        new Vector3(chunkHeight * World.g, chunkHeight * World.f, 0),
+        new Vector3(-chunkSize * World.g, -chunkSize * World.f, 0),
+        new Vector3(chunkSize * World.g, chunkSize * World.f, 0),
         new Vector3(0, 0, -2 * chunkSize), new Vector3(0, 0, 2 * chunkSize) };
 
+    //Indices of the corners for each face of the chunk
     public static int[][] neighborChunkCorners = { new int[]{ 0,1,2,3}, new int[]{ 4,5,6,7}, new int[] {0,1,4,5},
         new int[] {2,3,6,7}, new int[] {0,2,4,6}, new int[] {1,3,5,7}};
     #endregion
 
     #region Start
+    /// <summary>
+    /// Initial Generation
+    /// </summary>
     void Start()
     {
         filter = gameObject.GetComponent<MeshFilter>();
@@ -92,6 +101,9 @@ public class Chunk : MonoBehaviour
         StartGeneration();
     }
 
+    /// <summary>
+    /// Generation on Reload from Chunk Pool
+    /// </summary>
     public void RebuildChunk()
     {
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
@@ -99,20 +111,35 @@ public class Chunk : MonoBehaviour
         StartGeneration();
     }
 
+    /// <summary>
+    /// Generation on change in geometry
+    /// </summary>
+    public void GeometricUpdateChunk()
+    {
+
+    }
+
+    /// <summary>
+    /// Produces points and a mesh
+    /// </summary>
     public void StartGeneration()
     {
+        //Interpolation Values
         FindNeighbors();
         FindCorners();
-        if (!uniform)
-            GenerateMesh(new Vector3(chunkSize, chunkHeight, chunkSize));
 
+        //Find values if near surface
+        if (!uniform)
+            GenerateMesh(new Vector3(chunkSize, chunkSize, chunkSize));
+
+        //Mesh Finalizing Procedure
         mesh.RecalculateBounds();
         if (meshRecalculate) { mesh.RecalculateNormals(); }
         filter.mesh = mesh;
         coll.sharedMesh = mesh;
 
-        Vector3 truePos = HexToPos(new WorldPos(-1,4,7));
-        Chunk neighbor = world.GetChunk(truePos);
+        //Vector3 truePos = HexToPos(new WorldPos(-1,4,7));
+        //Chunk neighbor = world.GetChunk(truePos);
         //if (neighbor != null)
         //{
         //    for (int i = 0; i < 8; i++)
@@ -129,6 +156,9 @@ public class Chunk : MonoBehaviour
         //}
     }
 
+    /// <summary>
+    /// Resets all values in a Chunk
+    /// </summary>
     void ResetValues()
     {
         uniform = false;
@@ -138,7 +168,7 @@ public class Chunk : MonoBehaviour
         tris.Clear();
         normals.Clear();
         mesh.Clear();
-        vertexes = new bool[chunkSize, chunkHeight, chunkSize];
+        vertexes = new bool[chunkSize, chunkSize, chunkSize];
     }
 #endregion
 
@@ -150,18 +180,18 @@ public class Chunk : MonoBehaviour
     {
         for(int i = 0; i < chunkSize; i++)
         {
-            for (int j = 0; j < chunkHeight; j++)
+            for (int j = 0; j < chunkSize; j++)
             {
                 for (int k = 0; k < chunkSize - 1; k++)
                 {
                     if (vertexes[i, j, k])
                     {
-                        Vector3 vert = HexToPos(new WorldPos(i, j, k));
+                        Vector3 vert = HexToPos(new HexCell((byte)i, (byte)j, (byte)k));
                         Gizmos.color = Color.gray;
                         Gizmos.DrawSphere(vert, .2f);
                         if (world.showNormals)
                         {
-                            Vector3 dir = Procedural.Noise.noiseMethods[0][2](vert, noiseScale).derivative.normalized;
+                            Vector3 dir = GetNormal(vert);
                             Gizmos.color = Color.yellow;
                             Gizmos.DrawRay(vert, dir);
                         }
@@ -215,8 +245,8 @@ public class Chunk : MonoBehaviour
             int z = i % 2 == 1 ? 1 : 0;
             if (!cornerInitialized[x, y, z])
             {
-                corners[x, y, z] = GetNoise(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
-                cornerNormals[x, y, z] = GetNormal(HexOffset + new Vector3(chunkSize * x, chunkHeight * y, chunkSize * z));
+                corners[x, y, z] = GetNoise(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
+                cornerNormals[x, y, z] = GetNormal(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
             }
         }
         cornersReady = true;
@@ -246,14 +276,14 @@ public class Chunk : MonoBehaviour
             {
                 for (int k = 0; k < size.z; k++)
                 {
-                    Vector3 center = new Vector3(i, j, k);
-                    Vector3 shiftedCenter = center + HexOffset;
+                    HexCell center = new HexCell(i, j, k);
+                    HexWorldCoord shiftedCenter = HexToWorldHex(center.ToHexCoord());
                     if (GradientCheck(shiftedCenter))
                     {
                         vertexes[i, j, k] = true;
-                        if (world.pointMode == PointMode.Gradient) { CreatePoint(center); }
+                        if (world.pointMode == PointMode.Gradient) { CreatePoint(center.ToHexCoord()); }
                     }
-                    if (world.pointMode == PointMode.All) { CreatePoint(center); }
+                    if (world.pointMode == PointMode.All) { CreatePoint(center.ToHexCoord()); }
                 }
             }
         }
@@ -271,7 +301,7 @@ public class Chunk : MonoBehaviour
             {
                 for (int k = neighborExists[4] ? -1 : 0; k < (neighborExists[5] ? size.z : size.z - 1); k++)
                 {
-                    Build(new WorldPos(i, j, k));
+                    Build(new HexCell(i, j, k));
                 }
             }
         }
@@ -281,9 +311,9 @@ public class Chunk : MonoBehaviour
     /// Builds the faces at a single Octahedron
     /// </summary>
     /// <param name="center">0-point of the octahedron to be built</param>
-    void Build(WorldPos center)
+    void Build(HexCell center)
     {
-        vertTemp = new List<Vector3>();
+        vertTemp = new List<HexCell>();
         vertSuccess = new List<int>();
         vertFail = new List<int>();
         GetHitList(center);
@@ -292,7 +322,7 @@ public class Chunk : MonoBehaviour
             hitList[success] = true;
 
         int[] tempTriArray;
-        Vector3[] tempVertArray;
+        HexCell[] tempVertArray;
 
         tempTriArray = World.triLookup[World.boolArrayToInt(hitList)];
         tempVertArray = World.vertLookup[World.boolArrayToInt(hitList)];
@@ -300,15 +330,15 @@ public class Chunk : MonoBehaviour
         if (tempTriArray == null)
             tempTriArray = new int[0];
         if (tempVertArray == null)
-            tempVertArray = new Vector3[0];
+            tempVertArray = new HexCell[0];
 
         List<int> tempTempTri = new List<int>();
         foreach (int tri in tempTriArray)
             tempTempTri.Add(tri + verts.Count);
 
-        List<Vector3> temptempVert = new List<Vector3>();
-        foreach (Vector3 vert in tempVertArray)
-            temptempVert.Add(vert + center.ToVector3());
+        List<HexCell> temptempVert = new List<HexCell>();
+        foreach (HexCell vert in tempVertArray)
+            temptempVert.Add(vert + center);
 
         tris.AddRange(tempTempTri);
         verts.AddRange(temptempVert);
@@ -320,11 +350,11 @@ public class Chunk : MonoBehaviour
     /// Find a list of the hits for the other points of the octahedron
     /// </summary>
     /// <param name="center">0-point of the octahedron to be built</param>
-    void GetHitList(WorldPos center)
+    void GetHitList(HexCell center)
     {
         for (int i = 0; i < 6; i++)
         {
-            Vector3 vert = (center + hexPoints[i].ToWorldPos()).ToVector3();
+            HexCell vert = (center + hexPoints[i]);
             if (CheckHit(vert))
             {
                 vertTemp.Add(vert);
@@ -340,20 +370,20 @@ public class Chunk : MonoBehaviour
     /// The Third Slant is the only missing face from the Octahedron scheme
     /// </summary>
     /// <param name="center">0-point of the octahedron to be built</param>
-    void BuildThirdSlant(WorldPos center)
+    void BuildThirdSlant(HexCell center)
     {
-        if (CheckHit(center.ToVector3()) && CheckHit(center.ToVector3() + hexPoints[1]) && 
-            CheckHit(center.ToVector3() - hexPoints[3] + hexPoints[5]) && 
-            CheckHit(center.ToVector3() + hexPoints[2] + hexPoints[5]) && World.thirdDiagonalActive)
+        if (CheckHit(center) && CheckHit(center + hexPoints[1]) && 
+            CheckHit(center - hexPoints[3] + hexPoints[5]) && 
+            CheckHit(center + hexPoints[2] + hexPoints[5]) && World.thirdDiagonalActive)
         {
             int vertCount = verts.Count;
             vertTemp.Clear();
-            vertTemp.Add(center.ToVector3());
-            vertTemp.Add(center.ToVector3() - hexPoints[3] + hexPoints[5]);
-            vertTemp.Add(center.ToVector3() + hexPoints[2] + hexPoints[5]);
-            vertTemp.Add(center.ToVector3());
-            vertTemp.Add(center.ToVector3() + hexPoints[2] + hexPoints[5]);
-            vertTemp.Add(center.ToVector3() + hexPoints[1]);
+            vertTemp.Add(center);
+            vertTemp.Add(center - hexPoints[3] + hexPoints[5]);
+            vertTemp.Add(center + hexPoints[2] + hexPoints[5]);
+            vertTemp.Add(center);
+            vertTemp.Add(center + hexPoints[2] + hexPoints[5]);
+            vertTemp.Add(center + hexPoints[1]);
             for (int i = 0; i < 6; i++)
             {
                 verts.Add(vertTemp[i]);
@@ -373,24 +403,27 @@ public class Chunk : MonoBehaviour
     void MeshProcedure()
     {
         List<Vector3> posVerts = new List<Vector3>();
-        foreach (Vector3 hex in verts)
+        foreach (HexCell hexCell in verts)
         {
-            normals.Add(Procedural.Noise.noiseMethods[0][2](hex, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0));
-            Vector3 offset = Vector3.zero;
-            Vector3 smooth = Vector3.zero;
+            HexCoord hex = hexCell.ToHexCoord();
+            HexWorldCoord point = HexToWorldHex(hex);
+            normals.Add(GetNormal(point, false) * 20 + new Vector3(0, thresDropOff, 0));
+            Vector3 offset = new Vector3();
+            Vector3 smooth = new Vector3();
             if (world.smoothLand)
             {
-                Vector3 point = hex + HexOffset;
-                Vector3 norm = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+                Vector3 norm = GetNormal(point, false) * 20 + new Vector3(0, thresDropOff, 0);
                 norm = norm.normalized * sqrt3 / 2;
-                float A = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) + norm));
-                float B = GetNoise(PosToHex(HexToPos(point.ToWorldPos()) - norm));
+                float A = GetNoise(world.PosToHex(world.HexToPos(point) + norm));
+                float B = GetNoise(world.PosToHex(world.HexToPos(point) - norm));
                 float T = 0;
                 smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
             }
             if (world.offsetLand)
-                offset = .5f * GetNormal((HexToPos(hex.ToWorldPos()) + smooth) * 50) + 2 * GetNormal((HexToPos(hex.ToWorldPos()) + smooth) * 3);
-            posVerts.Add(HexToPos(new WorldPos(Mathf.RoundToInt(hex.x), Mathf.RoundToInt(hex.y), Mathf.RoundToInt(hex.z))) + offset + smooth);
+            {
+                offset = GetNormal((HexToPos(hexCell) + smooth) * 9) + .3f * GetNormal((HexToPos(hexCell) + smooth) * 27);
+            }  
+            posVerts.Add(HexToPos(hexCell) + offset + smooth);
         }
         mesh.SetVertices(posVerts);
         mesh.SetTriangles(tris, 0);
@@ -412,12 +445,12 @@ public class Chunk : MonoBehaviour
         return true;
     }
 
-    public void EditPointValue(WorldPos coord, float change)
+    public void EditPointValue(HexCell cell, float change)
     {
         update = false;
         try
         {
-            editedValues[coord.x, coord.y, coord.z] += change;
+            editedValues[cell.x, cell.y, cell.z] += change;
         }
         catch 
         {
@@ -425,12 +458,12 @@ public class Chunk : MonoBehaviour
         }
     }
 
-    public void EditPointNormal(WorldPos coord, Vector3 change)
+    public void EditPointNormal(HexCell cell, Vector3 change)
     {
         update = false;
         try
         {
-            editedNormals[coord.x, coord.y, coord.z] += change;
+            editedNormals[cell.x, cell.y, cell.z] += change;
         }
         catch
         {
@@ -445,21 +478,20 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">Hex point to check</param>
     /// <returns>Boolean</returns>
-    public bool GradientCheck(Vector3 point)
+    public bool GradientCheck(HexWorldCoord point)
     {
         //float x = point.x;
         //float y = point.y;
         //float z = point.z;
-        Vector3 gradient = Procedural.Noise.noiseMethods[0][2](point, noiseScale).derivative*20 + new Vector3(0, thresDropOff, 0);
+        Vector3 gradient = GetNormal(point, false)*20 + new Vector3(0, thresDropOff, 0);
         //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
         gradient = gradient.normalized;
-        Vector3 hexPos = new Vector3(point.x, point.y, point.z);
-        if (!Land(hexPos + world.PosToHex(gradient)) && Land(hexPos - world.PosToHex(gradient)))
+        if (!Land(point + world.PosToHex(gradient)) && Land(point - world.PosToHex(gradient)))
             return true;
         return false;
     }
     
-    public bool Land(Vector3 point)
+    public bool Land(HexWorldCoord point)
     {
         return GetNoise(point)<threshold;
     }
@@ -475,10 +507,10 @@ public class Chunk : MonoBehaviour
         return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative, normal);
     }
 
-    public float GetInterp(Vector3 pos)
+    public float GetInterp(HexCoord pos)
     {
-        Vector3 low = HexOffset;
-        Vector3 high = HexOffset + new Vector3(chunkSize, chunkHeight, chunkSize);
+        HexWorldCoord low = HexOffset;
+        HexWorldCoord high = HexOffset + new HexCoord(chunkSize, chunkSize, chunkSize);
 
         float xD = (pos.x - low.x) / (high.x - low.x);
         float yD = (pos.y - low.y) / (high.y - low.y);
@@ -496,10 +528,10 @@ public class Chunk : MonoBehaviour
         return c;
     }
 
-    public Vector3 GetNormalInterp(Vector3 pos)
+    public Vector3 GetNormalInterp(HexCoord pos)
     {
-        Vector3 low = HexOffset;
-        Vector3 high = HexOffset + new Vector3(chunkSize, chunkHeight, chunkSize);
+        HexWorldCoord low = HexOffset;
+        HexWorldCoord high = HexOffset + new HexCoord(chunkSize, chunkSize, chunkSize);
 
         float xD = (pos.x - low.x) / (high.x - low.x);
         float yD = (pos.y - low.y) / (high.y - low.y);
@@ -517,15 +549,26 @@ public class Chunk : MonoBehaviour
         return c;
     }
 
-    public static float GetNoise(Vector3 pos)
+    public static float GetNoise(HexWorldCoord pos)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](pos, noiseScale).value * 20 + pos.y * thresDropOff;
+        float noiseVal = Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
         return noiseVal;
     }
 
-    public static Vector3 GetNormal(Vector3 pos)
+    public static Vector3 GetNormal(HexWorldCoord pos, bool normalized = true)
     {
-        return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative.normalized;
+        if(normalized)
+            return Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).derivative.normalized;
+        else
+            return Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).derivative;
+    }
+
+    public static Vector3 GetNormal(Vector3 pos, bool normalized = true)
+    {
+        if (normalized)
+            return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative.normalized;
+        else
+            return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative;
     }
 
     /// <summary>
@@ -533,21 +576,21 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">hex point to check</param>
     /// <returns>Boolean</returns>
-    public bool CheckHit(Vector3 point)
+    public bool CheckHit(HexCell point)
     {
         bool output;
-        if (point.x < chunkSize && point.x > -1 && point.y < chunkHeight && point.y > -1 && point.z < chunkSize && point.z > -1)
+        if (point.x < chunkSize && point.x > -1 && point.y < chunkSize && point.y > -1 && point.z < chunkSize && point.z > -1)
             output = vertexes[(int)(point.x + .5f), (int)(point.y + .5f), (int)(point.z + .5f)];
         else
         {
             try
             {
-                Vector3 truePos = HexToPos(point.ToWorldPos());
+                Vector3 truePos = HexToPos(point);
                 Chunk neighbor = world.GetChunk(truePos);
-                Vector3 hex = neighbor.PosToHex(truePos);
+                HexCoord hex = neighbor.PosToHex(truePos);
                 output = neighbor.vertexes[(int)(hex.x + .1f), (int)(hex.y + .1f), (int)(hex.z + .1f)];
             }
-            catch {  output = world.CheckHit(HexToPos(point.ToWorldPos())); }
+            catch {  output = world.CheckHit(HexToPos(point)); }
         }
         
         return output;
@@ -575,12 +618,12 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">World Position</param>
     /// <returns>Hex Coordinate</returns>
-    public Vector3 PosToHex (Vector3 point)
+    public HexCoord PosToHex (Vector3 point)
     {
         point.x -= PosOffset.x;
         point.y -= PosOffset.y;
         point.z -= PosOffset.z;
-        return world.PosToHex(point);
+        return world.PosToHex(point).ToHexCoord();
     }
 
     /// <summary>
@@ -588,21 +631,26 @@ public class Chunk : MonoBehaviour
     /// </summary>
     /// <param name="point">Hex Coordinate</param>
     /// <returns>World Position</returns>
-    public Vector3 HexToPos (WorldPos point)
+    public Vector3 HexToPos (HexCell point)
     {
         Vector3 output = new Vector3();
-        output = world.HexToPos(point.ToVector3());
+        output = world.HexToPos(point.ToHexCoord());
         output.x += PosOffset.x;
         output.y += PosOffset.y;
         output.z += PosOffset.z;
         return output;
     }
+
+    public HexWorldCoord HexToWorldHex(HexCoord point)
+    {
+        return HexOffset + point;
+    }
     #endregion
 
     #region Debug
-    void CreatePoint(Vector3 location)
+    void CreatePoint(HexCoord location)
     {
-        WorldPos posLoc = new WorldPos(Mathf.RoundToInt(location.x), Mathf.RoundToInt(location.y), Mathf.RoundToInt(location.z));
+        HexCell posLoc = new HexCell((byte)Mathf.RoundToInt(location.x), (byte)Mathf.RoundToInt(location.y), (byte)Mathf.RoundToInt(location.z));
         Vector3 warpedLocation = HexToPos(posLoc);
         if (world.pointLoc)
         {
@@ -611,14 +659,14 @@ public class Chunk : MonoBehaviour
         }
     }
 
-    public void FaceBuilderCheck(Vector3 center)
+    public void FaceBuilderCheck(HexCell center)
     {
-        List<Vector3> vertTemp = new List<Vector3>();
+        List<HexCell> vertTemp = new List<HexCell>();
         List<int> vertFail = new List<int>();
         List<int> vertSuccess = new List<int>();
         for (int i = 0; i < 6; i++)
         {
-            Vector3 vert = center + hexPoints[i];
+            HexCell vert = center + hexPoints[i];
             print(vert + "(Check Point) " + i + ", " + CheckHit(vert));
             if (CheckHit(vert))
             {

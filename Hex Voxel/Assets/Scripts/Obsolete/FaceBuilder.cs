@@ -1,10 +1,12 @@
-﻿using System;
+﻿//Obsolete used to build the mesh for each point
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class FaceBuilder
 {
+    /*
     //Geometric Booleans
     public static bool sixPointActive = true, sixFaceCancel;
     public static bool fivePointActive = true, fiveFaceCancel;
@@ -339,4 +341,5 @@ public class FaceBuilder
             }
         }
     }
+    */
 }

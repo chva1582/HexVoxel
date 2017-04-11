@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class Vertex
 {
+    /*
     Chunk chunk;
     public bool isSolid;
     public WorldPos center;
@@ -442,4 +443,5 @@ public class Vertex
         }
     }
     #endregion
+    */
 }

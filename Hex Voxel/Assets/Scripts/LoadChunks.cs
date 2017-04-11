@@ -7,18 +7,18 @@ public class LoadChunks : MonoBehaviour
 {
     World world;
 
-    List<WorldPos> updateList = new List<WorldPos>();
-    List<WorldPos> buildList = new List<WorldPos>();
+    List<ChunkCoord> updateList = new List<ChunkCoord>();
+    List<ChunkCoord> buildList = new List<ChunkCoord>();
 
     bool reloadRenderLists;
 
-    static WorldPos[] chunkPositions;
+    static ChunkCoord[] chunkPositions;
     static RenderDistance[] renderDistances = { new RenderDistance(RenderDistanceName.Short, "ShortRenderDistance.txt", 4096),
         new RenderDistance(RenderDistanceName.Medium, "MediumRenderDistance.txt", 8192),
         new RenderDistance(RenderDistanceName.Long, "LongRenderDistance.txt", 16384) };
 
     int timer = 0;
-    WorldPos previousPos;
+    ChunkCoord previousPos;
 
     // Use this for initialization
     void Start()
@@ -28,11 +28,11 @@ public class LoadChunks : MonoBehaviour
 
         if (reloadRenderLists) { RewriteChunkList(); }
         
-        List<WorldPos> closeChunkList = new List<WorldPos>();
+        List<ChunkCoord> closeChunkList = new List<ChunkCoord>();
         using (StreamReader sr = File.OpenText(renderDistances[(int)world.renderDistance].filename))
         {
             string line;
-            WorldPos closeChunkCoord;
+            ChunkCoord closeChunkCoord;
             // Read and display lines from the file until the end of 
             // the file is reached.
             while ((line = sr.ReadLine()) != null)
@@ -64,13 +64,13 @@ public class LoadChunks : MonoBehaviour
     /// </summary>
     void FindChunksToLoad()
     {
-        WorldPos playerPos = world.PosToChunk(transform.position);
+        ChunkCoord playerPos = world.PosToChunk(transform.position);
 
         if(buildList.Count == 0)
         {
             for (int i = 0; i < chunkPositions.Length; i++)
             {
-                WorldPos newChunkPos = new WorldPos(chunkPositions[i].x + playerPos.x,
+                ChunkCoord newChunkPos = new ChunkCoord(chunkPositions[i].x + playerPos.x,
                     chunkPositions[i].y + playerPos.y,
                     chunkPositions[i].z + playerPos.z);
 
@@ -103,7 +103,7 @@ public class LoadChunks : MonoBehaviour
         }
         for (int i = 0; i < updateList.Count; i++)
         {
-            Chunk chunk = world.GetChunk(updateList[0].ToVector3());
+            Chunk chunk = world.GetChunk(world.ChunkToPos(updateList[0]));
             if (chunk != null)
                 chunk.update = true;
             updateList.RemoveAt(0);
@@ -117,14 +117,14 @@ public class LoadChunks : MonoBehaviour
     {
         if (timer == 10)
         {
-            List<WorldPos> chunksToDelete = new List<WorldPos>();
+            List<ChunkCoord> chunksToDelete = new List<ChunkCoord>();
             foreach (var chunk in world.chunks)
             {
                 float distance = Vector3.SqrMagnitude(transform.position - world.ChunkToPos(chunk.Value.chunkCoords));
                 if (distance > renderDistances[(int)world.renderDistance].distance * 1.5f)
                     chunksToDelete.Add(chunk.Key);
             }
-            foreach (WorldPos chunk in chunksToDelete)
+            foreach (ChunkCoord chunk in chunksToDelete)
                 world.DestroyChunk(chunk);
             timer = 0;
         }
@@ -140,7 +140,7 @@ public class LoadChunks : MonoBehaviour
         string[] renderDistanceFilenames = { "ShortRenderDistance.txt", "MediumRenderDistance.txt", "LongRenderDistance.txt" };
         for (int renderDistances = 0; renderDistances < renderDistanceFilenames.Length; renderDistances++)
         {
-            List<Vector3> chunkList = new List<Vector3>();
+            List<ChunkCoord> chunkList = new List<ChunkCoord>();
             using (TextWriter tw = new StreamWriter(renderDistanceFilenames[renderDistances]))
             {
                 Debug.Log(string.Empty);
@@ -150,12 +150,12 @@ public class LoadChunks : MonoBehaviour
                     {
                         for (int k = -40; k < 40; k++)
                         {
-                            if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new WorldPos(i, j, k))) < 4096)
-                                chunkList.Add(new Vector3(i, j, k));
+                            if (Vector3.SqrMagnitude(world.ChunkToPos(world.PosToChunk(transform.position)) - world.ChunkToPos(new ChunkCoord(i, j, k))) < 4096)
+                                chunkList.Add(new ChunkCoord(i, j, k));
                         }
                     }
                 }
-                chunkList = chunkList.OrderBy(x => Vector3.Distance(Vector3.zero, world.ChunkToPos(x.ToWorldPos()))).ToList();
+                chunkList = chunkList.OrderBy(x => Vector3.Distance(Vector3.zero, world.ChunkToPos(x))).ToList();
                 foreach (var chunk in chunkList)
                 {
                     tw.WriteLine(Mathf.RoundToInt(chunk.x) + " " + Mathf.RoundToInt(chunk.y) + " " + Mathf.RoundToInt(chunk.z));

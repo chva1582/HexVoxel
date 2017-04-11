@@ -1,13 +1,18 @@
-﻿using UnityEngine;
+﻿//Calculate noise properties at different locations
+//Includes both Perlin and Value Noise in various dimensions
+using UnityEngine;
 
 namespace Procedural
 {
+    //Points to the functions to be used for Noise calculations
     public delegate NoiseSample NoiseMethod(Vector3 point, float frequency);
 
+    //What type of Noise is it
     public enum NoiseMethodType { Value, Perlin}
 
     public static class Noise
     {
+        //Arrays of the specific methods used for calculating Noise
         public static NoiseMethod[] perlinMethods = { Perlin1D, Perlin2D, Perlin3D};
         public static NoiseMethod[] valueMethods = { Value1D, Value2D, Value3D };
         public static NoiseMethod[][] noiseMethods = { valueMethods, perlinMethods };

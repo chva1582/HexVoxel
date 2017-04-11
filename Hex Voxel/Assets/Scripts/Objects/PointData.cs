@@ -1,4 +1,6 @@
-﻿using UnityEditor;
+﻿//Represents points and visualizes some debug gizmos
+//Attached to the Point Prefab
+using UnityEditor;
 using UnityEngine;
 
 public class PointData : MonoBehaviour
@@ -14,9 +16,12 @@ public class PointData : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
+        //Only shows gizmos when the object is selected not the parents
         if (Selection.activeGameObject != transform.gameObject)
             return;
+
         Vector3 pos = transform.position;
+        //Shows the Octahedron grid at the point and prints some info
         if (world.debugMode == DebugMode.Octahedron)
         {
             Gizmos.color = Color.red;
@@ -28,8 +33,10 @@ public class PointData : MonoBehaviour
                         Gizmos.DrawLine(pos + GetTetra(i), pos + GetTetra(j));
                 }
             }
-            chunk.FaceBuilderCheck(chunk.PosToHex(pos).ToWorldPos().ToVector3());
+            chunk.FaceBuilderCheck(chunk.PosToHex(pos).ToHexCell());
         }
+
+        //Shows the Gradient Check with points shown (blue if above threshold red if below)
         if(world.debugMode == DebugMode.Gradient)
         {
             Vector3 gradient = chunk.GetNormalInterp(chunk.PosToHex(pos));//Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative*20 + new Vector3(0, Chunk.thresDropOff, 0);
@@ -44,10 +51,14 @@ public class PointData : MonoBehaviour
             Gizmos.DrawSphere(pos + gradient, .05f);
             Gizmos.color = chunk.Land(world.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
-            //print(((Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative.normalized+new Vector3(0,Chunk.thresDropOff,0)).normalized*Mathf.Sqrt(3)).ToString());
         }
     }
 
+    /// <summary>
+    /// Relative point for Octahedron Index
+    /// </summary>
+    /// <param name="index">Octahedron Index</param>
+    /// <returns>Relative Point</returns>
     Vector3 GetTetra(int index)
     {
         Vector3 vert = Chunk.tetraPoints[index];
