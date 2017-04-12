@@ -191,9 +191,15 @@ public class World : MonoBehaviour
         catch
         {
             HexWorldCell hex = PosToHex(pos).ToHexWorldCell();
-            Vector3 gradient = Procedural.Noise.noiseMethods[0][2](hex.ToHexWorldCoord().ToVector3(), Chunk.noiseScale).derivative * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradient = Procedural.Noise.noiseMethods[2][2](hex.ToHexWorldCoord().ToVector3(), Chunk.noiseScale).derivative * 20 + new Vector3(0, Chunk.thresDropOff, 0);
             gradient = gradient.normalized;
             if (!Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) + gradient)) && Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) - gradient)))
+                return true;
+            Vector3 gradientHigh = GetNormal(hex + PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradientLow = GetNormal(hex - PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            gradientHigh = gradientHigh.normalized * Chunk.sqrt3 * 0.25f;
+            gradientLow = gradientLow.normalized * Chunk.sqrt3 * 0.25f;
+            if (!Land(hex + PosToHex(gradient * 0.5f) + PosToHex(gradientHigh)) && Land(hex - PosToHex(gradient * 0.5f) + PosToHex(gradientLow)))
                 return true;
             return false;
         }
@@ -201,8 +207,16 @@ public class World : MonoBehaviour
 
     bool Land(HexWorldCoord point)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](point.ToVector3(), Chunk.noiseScale).value * 20;
+        float noiseVal = Procedural.Noise.noiseMethods[2][2](point.ToVector3(), Chunk.noiseScale).value * 20;
         return noiseVal < Chunk.threshold - point.y * Chunk.thresDropOff;
+    }
+
+    public static Vector3 GetNormal(HexWorldCoord pos, bool normalized = true)
+    {
+        if (normalized)
+            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), Chunk.noiseScale).derivative.normalized;
+        else
+            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), Chunk.noiseScale).derivative;
     }
     #endregion
 

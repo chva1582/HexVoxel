@@ -54,9 +54,9 @@ public class Chunk : MonoBehaviour
     public bool[,,] cornerInitialized = new bool[2, 2, 2];
 
     //Noise Parameters
-    public static float noiseScale = 0.01f;
+    public static float noiseScale = 0.001f;
     public static float threshold = 0f;
-    public static float thresDropOff = .25f;
+    public static float thresDropOff = 0.1f;
     
     //Other Options
     public bool meshRecalculate;
@@ -488,6 +488,12 @@ public class Chunk : MonoBehaviour
         gradient = gradient.normalized;
         if (!Land(point + world.PosToHex(gradient)) && Land(point - world.PosToHex(gradient)))
             return true;
+        Vector3 gradientHigh = GetNormal(point + world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, thresDropOff, 0);
+        Vector3 gradientLow = GetNormal(point - world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, thresDropOff, 0);
+        gradientHigh = gradientHigh.normalized * sqrt3 * 0.25f;
+        gradientLow = gradientLow.normalized * sqrt3 * 0.25f;
+        if (!Land(point + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) && Land(point - world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientLow)))
+            return true;
         return false;
     }
     
@@ -504,7 +510,7 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool TriNormCheck(Vector3 center, Vector3 normal)
     {
-        return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[0][2](center, noiseScale).derivative, normal);
+        return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[2][2](center, noiseScale).derivative, normal);
     }
 
     public float GetInterp(HexCoord pos)
@@ -551,24 +557,24 @@ public class Chunk : MonoBehaviour
 
     public static float GetNoise(HexWorldCoord pos)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
+        float noiseVal = Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
         return noiseVal;
     }
 
     public static Vector3 GetNormal(HexWorldCoord pos, bool normalized = true)
     {
         if(normalized)
-            return Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).derivative.normalized;
+            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).derivative.normalized;
         else
-            return Procedural.Noise.noiseMethods[0][2](pos.ToVector3(), noiseScale).derivative;
+            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).derivative;
     }
 
     public static Vector3 GetNormal(Vector3 pos, bool normalized = true)
     {
         if (normalized)
-            return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative.normalized;
+            return Procedural.Noise.noiseMethods[2][2](pos, noiseScale).derivative.normalized;
         else
-            return Procedural.Noise.noiseMethods[0][2](pos, noiseScale).derivative;
+            return Procedural.Noise.noiseMethods[2][2](pos, noiseScale).derivative;
     }
 
     /// <summary>

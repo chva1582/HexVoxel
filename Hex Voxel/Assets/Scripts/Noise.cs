@@ -13,9 +13,10 @@ namespace Procedural
     public static class Noise
     {
         //Arrays of the specific methods used for calculating Noise
+        public static NoiseMethod[] fractalPerlin = { Fractal1D, Fractal2D, Fractal3D };
         public static NoiseMethod[] perlinMethods = { Perlin1D, Perlin2D, Perlin3D};
         public static NoiseMethod[] valueMethods = { Value1D, Value2D, Value3D };
-        public static NoiseMethod[][] noiseMethods = { valueMethods, perlinMethods };
+        public static NoiseMethod[][] noiseMethods = { valueMethods, perlinMethods, fractalPerlin };
 
         #region Hash
         static int[] hash = 
@@ -355,6 +356,23 @@ namespace Procedural
             sample.derivative.z += (slopeZ + slopeXZ * tx + (slopeYZ + slope * tx) * ty) * dtz;
             sample.derivative *= frequency;
             return sample;
+        }
+        #endregion
+
+        #region Fractal
+        public static NoiseSample Fractal1D(Vector3 point, float frequency)
+        {
+            return Sum(Perlin1D, point, frequency, 3, 25f, 0.05f);
+        }
+
+        public static NoiseSample Fractal2D(Vector3 point, float frequency)
+        {
+            return Sum(Perlin2D, point, frequency, 3, 25f, 0.05f);
+        }
+
+        public static NoiseSample Fractal3D(Vector3 point, float frequency)
+        {
+            return Sum(Perlin3D, point, frequency, 3, 25f, 0.05f);
         }
         #endregion
 

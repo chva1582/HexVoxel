@@ -39,7 +39,7 @@ public class PointData : MonoBehaviour
         //Shows the Gradient Check with points shown (blue if above threshold red if below)
         if(world.debugMode == DebugMode.Gradient)
         {
-            Vector3 gradient = chunk.GetNormalInterp(chunk.PosToHex(pos));//Procedural.Noise.noiseMethods[0][2](world.PosToHex(pos), Chunk.noiseScale).derivative*20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradient = Chunk.GetNormal(world.PosToHex(pos), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
             gradient = gradient.normalized;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos, pos + gradient);
@@ -51,6 +51,19 @@ public class PointData : MonoBehaviour
             Gizmos.DrawSphere(pos + gradient, .05f);
             Gizmos.color = chunk.Land(world.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
+
+            Vector3 gradientHigh = Chunk.GetNormal(world.PosToHex(pos) + world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradientLow = Chunk.GetNormal(world.PosToHex(pos) - world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            gradientHigh = gradientHigh.normalized * 0.5f;
+            gradientLow = gradientLow.normalized * 0.5f;
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(pos + gradient / 2, pos + gradient / 2 + gradientHigh);
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(pos - gradient / 2, pos - gradient / 2 - gradientLow);
+            Gizmos.color = chunk.Land(world.PosToHex(pos) + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) ? Color.red : Color.blue;
+            Gizmos.DrawSphere(pos + gradient / 2 + gradientHigh, .02f);
+            Gizmos.color = chunk.Land(world.PosToHex(pos) - world.PosToHex(gradient * 0.5f) - world.PosToHex(gradientLow)) ? Color.red : Color.blue;
+            Gizmos.DrawSphere(pos - gradient / 2 - gradientLow, .02f);
         }
     }
 

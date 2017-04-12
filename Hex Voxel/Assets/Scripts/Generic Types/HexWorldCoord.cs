@@ -43,12 +43,32 @@ public struct HexWorldCoord
         return new HexWorldCoord(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
     }
 
+    public static HexWorldCoord operator +(HexWorldCoord w1, HexWorldCell w2)
+    {
+        return new HexWorldCoord(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
+    }
+
+    public static HexWorldCoord operator +(HexWorldCell w1, HexWorldCoord w2)
+    {
+        return new HexWorldCoord(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
+    }
+
     public static HexWorldCoord operator -(HexWorldCoord w1, HexWorldCoord w2)
     {
         return new HexWorldCoord(w1.x - w2.x, w1.y - w2.y, w1.z - w2.z);
     }
 
     public static HexWorldCoord operator -(HexWorldCoord w1, HexCoord w2)
+    {
+        return new HexWorldCoord(w1.x - w2.x, w1.y - w2.y, w1.z - w2.z);
+    }
+
+    public static HexWorldCoord operator -(HexWorldCoord w1, HexWorldCell w2)
+    {
+        return new HexWorldCoord(w1.x - w2.x, w1.y - w2.y, w1.z - w2.z);
+    }
+
+    public static HexWorldCoord operator -(HexWorldCell w1, HexWorldCoord w2)
     {
         return new HexWorldCoord(w1.x - w2.x, w1.y - w2.y, w1.z - w2.z);
     }
