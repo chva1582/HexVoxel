@@ -52,11 +52,6 @@ public class Chunk : MonoBehaviour
     public float[,,] corners = new float[2, 2, 2];
     public Vector3[,,] cornerNormals = new Vector3[2, 2, 2];
     public bool[,,] cornerInitialized = new bool[2, 2, 2];
-
-    //Noise Parameters
-    public static float noiseScale = 0.001f;
-    public static float threshold = 0f;
-    public static float thresDropOff = 0.1f;
     
     //Other Options
     public bool meshRecalculate;
@@ -186,14 +181,14 @@ public class Chunk : MonoBehaviour
                 {
                     if (vertexes[i, j, k])
                     {
-                        Vector3 vert = HexToPos(new HexCell((byte)i, (byte)j, (byte)k));
+                        HexCoord vert = new HexCoord((byte)i, (byte)j, (byte)k);
                         Gizmos.color = Color.gray;
-                        Gizmos.DrawSphere(vert, .2f);
+                        Gizmos.DrawSphere(HexToPos(vert.ToHexCell()), .2f);
                         if (world.showNormals)
                         {
-                            Vector3 dir = GetNormal(vert);
+                            Vector3 dir = World.GetNormal(HexToWorldHex(vert));
                             Gizmos.color = Color.yellow;
-                            Gizmos.DrawRay(vert, dir);
+                            Gizmos.DrawRay(HexToPos(vert.ToHexCell()), dir);
                         }
                     }
                 }
@@ -245,8 +240,8 @@ public class Chunk : MonoBehaviour
             int z = i % 2 == 1 ? 1 : 0;
             if (!cornerInitialized[x, y, z])
             {
-                corners[x, y, z] = GetNoise(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
-                cornerNormals[x, y, z] = GetNormal(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
+                corners[x, y, z] = World.GetNoise(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
+                cornerNormals[x, y, z] = World.GetNormal(HexOffset + new HexCoord(chunkSize * x, chunkSize * y, chunkSize * z));
             }
         }
         cornersReady = true;
@@ -407,21 +402,21 @@ public class Chunk : MonoBehaviour
         {
             HexCoord hex = hexCell.ToHexCoord();
             HexWorldCoord point = HexToWorldHex(hex);
-            normals.Add(GetNormal(point, false) * 20 + new Vector3(0, thresDropOff, 0));
+            normals.Add(World.GetNormal(point));
             Vector3 offset = new Vector3();
             Vector3 smooth = new Vector3();
             if (world.smoothLand)
             {
-                Vector3 norm = GetNormal(point, false) * 20 + new Vector3(0, thresDropOff, 0);
+                Vector3 norm = World.GetNormal(point);
                 norm = norm.normalized * sqrt3 / 2;
-                float A = GetNoise(world.PosToHex(world.HexToPos(point) + norm));
-                float B = GetNoise(world.PosToHex(world.HexToPos(point) - norm));
+                float A = World.GetNoise(world.PosToHex(world.HexToPos(point) + norm));
+                float B = World.GetNoise(world.PosToHex(world.HexToPos(point) - norm));
                 float T = 0;
                 smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
             }
             if (world.offsetLand)
             {
-                offset = GetNormal((HexToPos(hexCell) + smooth) * 9) + .3f * GetNormal((HexToPos(hexCell) + smooth) * 27);
+                offset = World.GetNormalNonTerrain((HexToPos(hexCell) + smooth) * 9) + .3f * World.GetNormalNonTerrain((HexToPos(hexCell) + smooth) * 27);
             }  
             posVerts.Add(HexToPos(hexCell) + offset + smooth);
         }
@@ -483,24 +478,21 @@ public class Chunk : MonoBehaviour
         //float x = point.x;
         //float y = point.y;
         //float z = point.z;
-        Vector3 gradient = GetNormal(point, false)*20 + new Vector3(0, thresDropOff, 0);
+        Vector3 gradient = World.GetNormal(point);
         //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
         gradient = gradient.normalized;
-        if (!Land(point + world.PosToHex(gradient)) && Land(point - world.PosToHex(gradient)))
+        if (!World.Land(point + world.PosToHex(gradient)) && World.Land(point - world.PosToHex(gradient)))
             return true;
-        Vector3 gradientHigh = GetNormal(point + world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, thresDropOff, 0);
-        Vector3 gradientLow = GetNormal(point - world.PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, thresDropOff, 0);
+        Vector3 gradientHigh = World.GetNormal(point + world.PosToHex(gradient * 0.5f));
+        Vector3 gradientLow = World.GetNormal(point - world.PosToHex(gradient * 0.5f));
         gradientHigh = gradientHigh.normalized * sqrt3 * 0.25f;
         gradientLow = gradientLow.normalized * sqrt3 * 0.25f;
-        if (!Land(point + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) && Land(point - world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientLow)))
+        if (!World.Land(point + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) && World.Land(point - world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientLow)))
             return true;
         return false;
     }
     
-    public bool Land(HexWorldCoord point)
-    {
-        return GetNoise(point)<threshold;
-    }
+    
 
     /// <summary>
     /// Checks if a triangle faces the same direction as the noise
@@ -510,7 +502,7 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool TriNormCheck(Vector3 center, Vector3 normal)
     {
-        return 90 > Vector3.Angle(Procedural.Noise.noiseMethods[2][2](center, noiseScale).derivative, normal);
+        return 90 > Vector3.Angle(World.GetNormal(PosToHex(center).ToHexWorldCoord()), normal);
     }
 
     public float GetInterp(HexCoord pos)
@@ -555,28 +547,6 @@ public class Chunk : MonoBehaviour
         return c;
     }
 
-    public static float GetNoise(HexWorldCoord pos)
-    {
-        float noiseVal = Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
-        return noiseVal;
-    }
-
-    public static Vector3 GetNormal(HexWorldCoord pos, bool normalized = true)
-    {
-        if(normalized)
-            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).derivative.normalized;
-        else
-            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), noiseScale).derivative;
-    }
-
-    public static Vector3 GetNormal(Vector3 pos, bool normalized = true)
-    {
-        if (normalized)
-            return Procedural.Noise.noiseMethods[2][2](pos, noiseScale).derivative.normalized;
-        else
-            return Procedural.Noise.noiseMethods[2][2](pos, noiseScale).derivative;
-    }
-
     /// <summary>
     /// Finds if this point is in the checks array
     /// </summary>
@@ -608,9 +578,9 @@ public class Chunk : MonoBehaviour
         bool allHigh = true;
         foreach (var corner in corners)
         {
-            if (corner - threshold < 1)
+            if (corner - World.threshold < 1)
                 allHigh = false;
-            if (corner - threshold > -1)
+            if (corner - World.threshold > -1)
                 allLow = false;
         }
         if (allHigh || allLow)

@@ -16,6 +16,11 @@ public class World : MonoBehaviour
     public static bool threePointActive = true, threeFaceReverse;
     public static bool thirdDiagonalActive = true, thirdDiagonalFaceReverse;
     
+    //Noise Parameters
+    public static float noiseScale = 0.03f;
+    public static float threshold = 0f;
+    public static float thresDropOff = 1f;
+
     public static readonly float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
     public static readonly float g = (2f / 3f) * Mathf.Sqrt(3);
     public static readonly float h = Mathf.Sqrt(3);
@@ -191,12 +196,12 @@ public class World : MonoBehaviour
         catch
         {
             HexWorldCell hex = PosToHex(pos).ToHexWorldCell();
-            Vector3 gradient = Procedural.Noise.noiseMethods[2][2](hex.ToHexWorldCoord().ToVector3(), Chunk.noiseScale).derivative * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradient = Procedural.Noise.noiseMethods[1][2](hex.ToHexWorldCoord().ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
             gradient = gradient.normalized;
             if (!Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) + gradient)) && Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) - gradient)))
                 return true;
-            Vector3 gradientHigh = GetNormal(hex + PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
-            Vector3 gradientLow = GetNormal(hex - PosToHex(gradient * 0.5f), false) * 20 + new Vector3(0, Chunk.thresDropOff, 0);
+            Vector3 gradientHigh = GetNormal(hex + PosToHex(gradient * 0.5f));
+            Vector3 gradientLow = GetNormal(hex - PosToHex(gradient * 0.5f));
             gradientHigh = gradientHigh.normalized * Chunk.sqrt3 * 0.25f;
             gradientLow = gradientLow.normalized * Chunk.sqrt3 * 0.25f;
             if (!Land(hex + PosToHex(gradient * 0.5f) + PosToHex(gradientHigh)) && Land(hex - PosToHex(gradient * 0.5f) + PosToHex(gradientLow)))
@@ -205,18 +210,28 @@ public class World : MonoBehaviour
         }
     }
 
-    bool Land(HexWorldCoord point)
+    public static bool Land(HexWorldCoord point)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[2][2](point.ToVector3(), Chunk.noiseScale).value * 20;
-        return noiseVal < Chunk.threshold - point.y * Chunk.thresDropOff;
+        return GetNoise(point) < threshold;
     }
 
-    public static Vector3 GetNormal(HexWorldCoord pos, bool normalized = true)
+    public static float GetNoise(HexWorldCoord pos)
+    {
+        float noiseVal = Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
+        return noiseVal;
+    }
+
+    public static Vector3 GetNormal(HexWorldCoord pos)
+    {
+            return Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+    }
+
+    public static Vector3 GetNormalNonTerrain(Vector3 pos, bool normalized = true)
     {
         if (normalized)
-            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), Chunk.noiseScale).derivative.normalized;
+            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale).derivative.normalized;
         else
-            return Procedural.Noise.noiseMethods[2][2](pos.ToVector3(), Chunk.noiseScale).derivative;
+            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale).derivative;
     }
     #endregion
 
