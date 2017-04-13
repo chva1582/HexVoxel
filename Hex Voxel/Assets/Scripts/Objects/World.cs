@@ -38,6 +38,7 @@ public class World : MonoBehaviour
     public bool pointLoc;
     public bool showNormals;
     public bool areaLoad;
+    public static bool island;
     public bool offsetLand;
     public bool smoothLand;
     public bool reloadRenderLists;
@@ -217,13 +218,16 @@ public class World : MonoBehaviour
 
     public static float GetNoise(HexWorldCoord pos)
     {
-        float noiseVal = Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
-        return noiseVal;
+        float noise = Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
+        if (island) { noise += Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192); }
+        return noise;
     }
 
     public static Vector3 GetNormal(HexWorldCoord pos)
     {
-            return Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+        Vector3 gradient = new Vector3();
+        if (island) { gradient += new Vector3(pos.x * -Mathf.Log(2) * Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192), 0, pos.z * -Mathf.Log(2) * Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192)); }
+        return Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
     }
 
     public static Vector3 GetNormalNonTerrain(Vector3 pos, bool normalized = true)

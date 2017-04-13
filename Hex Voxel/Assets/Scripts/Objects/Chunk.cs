@@ -475,11 +475,7 @@ public class Chunk : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool GradientCheck(HexWorldCoord point)
     {
-        //float x = point.x;
-        //float y = point.y;
-        //float z = point.z;
         Vector3 gradient = World.GetNormal(point);
-        //gradient -= new Vector3(2 * x * 4 * Mathf.Pow(Mathf.Pow(x,2)+ Mathf.Pow(z, 2),3), 0, 2 * z * 4 * Mathf.Pow(Mathf.Pow(x, 2) + Mathf.Pow(z, 2), 3)) * Mathf.Pow(10,-12);
         gradient = gradient.normalized;
         if (!World.Land(point + world.PosToHex(gradient)) && World.Land(point - world.PosToHex(gradient)))
             return true;
