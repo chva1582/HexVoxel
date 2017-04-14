@@ -208,7 +208,7 @@ public class Chunk : MonoBehaviour
                 }
             }
         }
-        //vertexes[0, 0, 0].BuildLookupTables();
+        if (!world.areaLoad) { (new Vertex(this, new WorldPos(0, 0, 0), 0)).BuildLookupTables(); }
 
         //Mesh Procedure
         List<Vector3> posVerts = new List<Vector3>();

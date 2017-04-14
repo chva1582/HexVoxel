@@ -170,6 +170,8 @@ public class Vertex
         //
         PlayerPrefs.SetString("Vertices Dictionary", totalVert);
         PlayerPrefs.SetString("Triangles Dictionary", totalTri);
+        System.IO.File.WriteAllText("C:/Users/charl/OneDrive/Documents/GitHub/HexVoxel/Hex Voxel/Vertices Dictionary.txt", totalVert);
+        System.IO.File.WriteAllText("C:/Users/charl/OneDrive/Documents/GitHub/HexVoxel/Hex Voxel/Triangles Dictionary.txt", totalTri);
         //Debug.Log(PlayerPrefs.GetString("Vertices Dictionary"));
         //Debug.Log(PlayerPrefs.GetString("Triangles Dictionary"));
         //BuildThirdSlant();
@@ -314,18 +316,17 @@ public class Vertex
         Vector3 faceVec = Chunk.hexPoints[failPoint];
         if (chunk.TriNormCheck(center.ToVector3(), faceVec.normalized) || !World.fourVertFaceReverse)
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 verts.Add(vertTemp[i]);
-                tris.Add(VertCount + 3 - i);
                 normals.Add(Chunk.GetNormal(center.ToVector3()));
             }
-            for (int i = 0; i < 3; i++)
-            {
-                verts.Add(vertTemp[i == 2 ? 3 : i]);
-                tris.Add(VertCount + 3 + i);
-                normals.Add(Chunk.GetNormal(center.ToVector3()));
-            }
+            tris.Add(VertCount);
+            tris.Add(VertCount + 2);
+            tris.Add(VertCount + 1);
+            tris.Add(VertCount);
+            tris.Add(VertCount + 1);
+            tris.Add(VertCount + 3);
         }
     }
 
@@ -403,16 +404,16 @@ public class Vertex
             else
                 tris.Add(VertCount + 2 - i);
         }
-        for (int i = 0; i < 3; i++)
-        {
-            verts.Add(vertTemp[i]);
-            normals.Add(Chunk.GetNormal(center.ToVector3()));
-            Vector3 faceVec = Vector3.Cross(Chunk.hexPoints[vertSuccess[1]] - Chunk.hexPoints[vertSuccess[0]], Chunk.hexPoints[vertSuccess[2]] - Chunk.hexPoints[vertSuccess[0]]);
-            if (!chunk.TriNormCheck(center.ToVector3(), faceVec.normalized))
-                tris.Add(VertCount + 3 + i);
-            else
-                tris.Add(VertCount + 5 - i);
-        }
+        //for (int i = 0; i < 3; i++)
+        //{
+        //    verts.Add(vertTemp[i]);
+        //    normals.Add(Chunk.GetNormal(center.ToVector3()));
+        //    Vector3 faceVec = Vector3.Cross(Chunk.hexPoints[vertSuccess[1]] - Chunk.hexPoints[vertSuccess[0]], Chunk.hexPoints[vertSuccess[2]] - Chunk.hexPoints[vertSuccess[0]]);
+        //    if (!chunk.TriNormCheck(center.ToVector3(), faceVec.normalized))
+        //        tris.Add(VertCount + 3 + i);
+        //    else
+        //        tris.Add(VertCount + 5 - i);
+        //}
     }
 
     void BuildThirdSlant()
