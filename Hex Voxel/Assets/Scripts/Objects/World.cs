@@ -224,15 +224,15 @@ public class World : MonoBehaviour
         if (pos.y > -15)
         {
             noise = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).value * 20 + hex.y * thresDropOff;
-            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192); }
+            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386); }
         }
         else
         {
             Vector3 basePos = new Vector3(pos.x, -15, pos.z);
             HexWorldCoord baseHex = PosToHex(basePos);
             noise = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).value * 20 + baseHex.y * thresDropOff;
-            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192); }
-            noise += (0.5f * (-pos.y - 15));
+            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386); }
+            noise += 5 * (Mathf.Pow(-pos.y - 15,0.35f));
         }
         return noise;
     }
@@ -244,15 +244,15 @@ public class World : MonoBehaviour
         if (pos.y > -15)
         {
             gradient = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
-            if (island) { gradient += 100 * new Vector3(pos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192)); }
+            if (island) { gradient += 100 * new Vector3(pos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386)); }
         }
         else
         {
             Vector3 basePos = new Vector3(pos.x, -15, pos.z);
             HexWorldCoord baseHex = PosToHex(basePos);
             gradient = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
-            if (island) { gradient += 100 * new Vector3(basePos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192)); }
-            gradient = new Vector3(gradient.x, -0.5f, gradient.z);
+            if (island) { gradient += 100 * new Vector3(basePos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386)); }
+            gradient = new Vector3(gradient.x, -1.75f * Mathf.Pow(-pos.y-15,-0.65f), gradient.z);
         }
         return gradient;
     }

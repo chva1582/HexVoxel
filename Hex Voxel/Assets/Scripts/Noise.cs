@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Procedural
 {
+    
     //Points to the functions to be used for Noise calculations
     public delegate NoiseSample NoiseMethod(Vector3 point, float frequency);
 
@@ -12,6 +13,8 @@ namespace Procedural
 
     public static class Noise
     {
+        public static int seed = 987654321;
+        
         //Arrays of the specific methods used for calculating Noise
         public static NoiseMethod[] fractalPerlin = { Fractal1D, Fractal2D, Fractal3D };
         public static NoiseMethod[] perlinMethods = { Perlin1D, Perlin2D, Perlin3D};
@@ -76,6 +79,7 @@ namespace Procedural
         #region Value Noise
         public static NoiseSample Value1D (Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int i0 = Mathf.FloorToInt(point.x);
             float t = point.x - i0;
@@ -100,6 +104,7 @@ namespace Procedural
 
         public static NoiseSample Value2D (Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -140,6 +145,7 @@ namespace Procedural
 
         public static NoiseSample Value3D(Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -199,6 +205,7 @@ namespace Procedural
         #region Perlin Noise
         public static NoiseSample Perlin1D(Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int i0 = Mathf.FloorToInt(point.x);
             float t0 = point.x - i0;
@@ -231,6 +238,7 @@ namespace Procedural
 
         public static NoiseSample Perlin2D(Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -282,6 +290,7 @@ namespace Procedural
 
         public static NoiseSample Perlin3D(Vector3 point, float frequency)
         {
+            point += new Vector3(seed, seed, seed);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
