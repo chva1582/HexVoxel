@@ -42,30 +42,33 @@ public class PointData : MonoBehaviour
         //Shows the Gradient Check with points shown (blue if above threshold red if below)
         if(world.debugMode == DebugMode.Gradient)
         {
-            Vector3 gradient = World.GetNormal(world.PosToHex(pos));
+            Vector3 gradient = World.GetNormal(World.PosToHex(pos));
             gradient = gradient.normalized;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos, pos + gradient);
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(pos, pos - gradient);
-            Gizmos.color = World.Land(world.PosToHex(pos)) ? Color.red : Color.blue;
+            Gizmos.color = World.Land(World.PosToHex(pos)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos, .15f);
-            Gizmos.color = World.Land(world.PosToHex(pos + gradient)) ? Color.red : Color.blue;
+            Gizmos.color = World.Land(World.PosToHex(pos + gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos + gradient, .05f);
-            Gizmos.color = World.Land(world.PosToHex(pos - gradient)) ? Color.red : Color.blue;
+            Gizmos.color = World.Land(World.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
 
-            Vector3 gradientHigh = World.GetNormal(world.PosToHex(pos) + world.PosToHex(gradient * 0.5f));
-            Vector3 gradientLow = World.GetNormal(world.PosToHex(pos) - world.PosToHex(gradient * 0.5f));
+            print(pos.y);
+            print("Gradient: " + gradient.ToString());
+
+            Vector3 gradientHigh = World.GetNormal(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f));
+            Vector3 gradientLow = World.GetNormal(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f));
             gradientHigh = gradientHigh.normalized * 0.5f;
             gradientLow = gradientLow.normalized * 0.5f;
             Gizmos.color = Color.red;
             Gizmos.DrawLine(pos + gradient / 2, pos + gradient / 2 + gradientHigh);
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(pos - gradient / 2, pos - gradient / 2 - gradientLow);
-            Gizmos.color = World.Land(world.PosToHex(pos) + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) ? Color.red : Color.blue;
+            Gizmos.color = World.Land(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos + gradient / 2 + gradientHigh, .02f);
-            Gizmos.color = World.Land(world.PosToHex(pos) - world.PosToHex(gradient * 0.5f) - world.PosToHex(gradientLow)) ? Color.red : Color.blue;
+            Gizmos.color = World.Land(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f) - World.PosToHex(gradientLow)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient / 2 - gradientLow, .02f);
         }
     }

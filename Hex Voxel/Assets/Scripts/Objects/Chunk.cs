@@ -21,7 +21,7 @@ public class Chunk : MonoBehaviour
 
     //Components
     public HexWorldCoord HexOffset { get { return new HexWorldCoord(chunkCoords.x * chunkSize, chunkCoords.y * chunkSize, chunkCoords.z * chunkSize); } }
-    public Vector3 PosOffset { get { return world.HexToPos(new HexWorldCoord(chunkCoords.x * chunkSize, chunkCoords.y * chunkSize, chunkCoords.z * chunkSize)); } }
+    public Vector3 PosOffset { get { return World.HexToPos(new HexWorldCoord(chunkCoords.x * chunkSize, chunkCoords.y * chunkSize, chunkCoords.z * chunkSize)); } }
     MeshFilter filter;
     MeshCollider coll;
     Mesh mesh;
@@ -409,8 +409,8 @@ public class Chunk : MonoBehaviour
             {
                 Vector3 norm = World.GetNormal(point);
                 norm = norm.normalized * sqrt3 / 2;
-                float A = World.GetNoise(world.PosToHex(world.HexToPos(point) + norm));
-                float B = World.GetNoise(world.PosToHex(world.HexToPos(point) - norm));
+                float A = World.GetNoise(World.PosToHex(World.HexToPos(point) + norm));
+                float B = World.GetNoise(World.PosToHex(World.HexToPos(point) - norm));
                 float T = 0;
                 smooth = norm.normalized * ((A + B) / 2 - T) / ((A - B) / 2) * -sqrt3 / 2;
             }
@@ -477,13 +477,13 @@ public class Chunk : MonoBehaviour
     {
         Vector3 gradient = World.GetNormal(point);
         gradient = gradient.normalized;
-        if (!World.Land(point + world.PosToHex(gradient)) && World.Land(point - world.PosToHex(gradient)))
+        if (!World.Land(point + World.PosToHex(gradient)) && World.Land(point - World.PosToHex(gradient)))
             return true;
-        Vector3 gradientHigh = World.GetNormal(point + world.PosToHex(gradient * 0.5f));
-        Vector3 gradientLow = World.GetNormal(point - world.PosToHex(gradient * 0.5f));
+        Vector3 gradientHigh = World.GetNormal(point + World.PosToHex(gradient * 0.5f));
+        Vector3 gradientLow = World.GetNormal(point - World.PosToHex(gradient * 0.5f));
         gradientHigh = gradientHigh.normalized * sqrt3 * 0.25f;
         gradientLow = gradientLow.normalized * sqrt3 * 0.25f;
-        if (!World.Land(point + world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientHigh)) && World.Land(point - world.PosToHex(gradient * 0.5f) + world.PosToHex(gradientLow)))
+        if (!World.Land(point + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) && World.Land(point - World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientLow)))
             return true;
         return false;
     }
@@ -595,7 +595,7 @@ public class Chunk : MonoBehaviour
         point.x -= PosOffset.x;
         point.y -= PosOffset.y;
         point.z -= PosOffset.z;
-        return world.PosToHex(point).ToHexCoord();
+        return World.PosToHex(point).ToHexCoord();
     }
 
     /// <summary>
@@ -606,7 +606,7 @@ public class Chunk : MonoBehaviour
     public Vector3 HexToPos (HexCell point)
     {
         Vector3 output = new Vector3();
-        output = world.HexToPos(point.ToHexCoord());
+        output = World.HexToPos(point.ToHexCoord());
         output.x += PosOffset.x;
         output.y += PosOffset.y;
         output.z += PosOffset.z;

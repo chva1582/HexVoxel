@@ -20,6 +20,7 @@ public class World : MonoBehaviour
     public static float noiseScale = 0.03f;
     public static float threshold = 0f;
     public static float thresDropOff = 1f;
+    public static float islandDropOff = 1.001f;
 
     public static readonly float f = 2f * Mathf.Sqrt(1 - (1 / Mathf.Sqrt(3)));
     public static readonly float g = (2f / 3f) * Mathf.Sqrt(3);
@@ -38,7 +39,7 @@ public class World : MonoBehaviour
     public bool pointLoc;
     public bool showNormals;
     public bool areaLoad;
-    public static bool island;
+    public static bool island = true;
     public bool offsetLand;
     public bool smoothLand;
     public bool reloadRenderLists;
@@ -100,8 +101,8 @@ public class World : MonoBehaviour
     {
         if (!areaLoad)
         {
-            CreateChunk(new ChunkCoord(3, -3, 3));
-            CreateChunk(new ChunkCoord(3, -2, 3));
+            CreateChunk(new ChunkCoord(-1, -2, 1));
+            //CreateChunk(new ChunkCoord(3, -2, 3));
         }
         LookupTableConstruction();
     }
@@ -197,7 +198,7 @@ public class World : MonoBehaviour
         catch
         {
             HexWorldCell hex = PosToHex(pos).ToHexWorldCell();
-            Vector3 gradient = Procedural.Noise.noiseMethods[1][2](hex.ToHexWorldCoord().ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+            Vector3 gradient = GetNormal(hex.ToHexWorldCoord());
             gradient = gradient.normalized;
             if (!Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) + gradient)) && Land(PosToHex(HexToPos(hex.ToHexWorldCoord()) - gradient)))
                 return true;
@@ -216,18 +217,44 @@ public class World : MonoBehaviour
         return GetNoise(point) < threshold;
     }
 
-    public static float GetNoise(HexWorldCoord pos)
+    public static float GetNoise(HexWorldCoord hex)
     {
-        float noise = Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).value * 20 + pos.y * thresDropOff;
-        if (island) { noise += Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192); }
+        Vector3 pos = HexToPos(hex);
+        float noise;
+        if (pos.y > -15)
+        {
+            noise = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).value * 20 + hex.y * thresDropOff;
+            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192); }
+        }
+        else
+        {
+            Vector3 basePos = new Vector3(pos.x, -15, pos.z);
+            HexWorldCoord baseHex = PosToHex(basePos);
+            noise = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).value * 20 + baseHex.y * thresDropOff;
+            if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192); }
+            noise += (0.5f * (-pos.y - 15));
+        }
         return noise;
     }
 
-    public static Vector3 GetNormal(HexWorldCoord pos)
+    public static Vector3 GetNormal(HexWorldCoord hex)
     {
-        Vector3 gradient = new Vector3();
-        if (island) { gradient += new Vector3(pos.x * -Mathf.Log(2) * Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192), 0, pos.z * -Mathf.Log(2) * Mathf.Pow(2, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192)); }
-        return Procedural.Noise.noiseMethods[1][2](pos.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+        Vector3 pos = HexToPos(hex);
+        Vector3 gradient;
+        if (pos.y > -15)
+        {
+            gradient = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+            if (island) { gradient += 100 * new Vector3(pos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 5192)); }
+        }
+        else
+        {
+            Vector3 basePos = new Vector3(pos.x, -15, pos.z);
+            HexWorldCoord baseHex = PosToHex(basePos);
+            gradient = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+            if (island) { gradient += 100 * new Vector3(basePos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 5192)); }
+            gradient = new Vector3(gradient.x, -0.5f, gradient.z);
+        }
+        return gradient;
     }
 
     public static Vector3 GetNormalNonTerrain(Vector3 pos, bool normalized = true)
@@ -240,7 +267,7 @@ public class World : MonoBehaviour
     #endregion
 
     #region Conversions
-    public Vector3 HexToPos(HexWorldCoord point)
+    public static Vector3 HexToPos(HexWorldCoord point)
     {
         Vector3 output;
         output.x = h2P[0].x * point.x + h2P[0].y * point.y + h2P[0].z * point.z;
@@ -249,7 +276,7 @@ public class World : MonoBehaviour
         return output;
     }
 
-    public Vector3 HexToPos(HexCoord point)
+    public static Vector3 HexToPos(HexCoord point)
     {
         Vector3 output;
         output.x = h2P[0].x * point.x + h2P[0].y * point.y + h2P[0].z * point.z;
@@ -258,7 +285,7 @@ public class World : MonoBehaviour
         return output;
     }
 
-    public HexWorldCoord PosToHex(Vector3 point)
+    public static HexWorldCoord PosToHex(Vector3 point)
     {
         HexWorldCoord output;
         output.x = p2H[0].x * point.x + p2H[0].y * point.y + p2H[0].z * point.z;
@@ -267,7 +294,7 @@ public class World : MonoBehaviour
         return output;
     }
 
-    public ChunkCoord PosToChunk(Vector3 point)
+    public static ChunkCoord PosToChunk(Vector3 point)
     {
         HexWorldCoord hex = PosToHex(point);
         ChunkCoord output;
@@ -277,7 +304,7 @@ public class World : MonoBehaviour
         return output;
     }
 
-    public Vector3 ChunkToPos(ChunkCoord chunkCoord)
+    public static Vector3 ChunkToPos(ChunkCoord chunkCoord)
     {
         HexWorldCoord output;
         output.x = chunkCoord.x * Chunk.chunkSize;
