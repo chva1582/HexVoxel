@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum DebugMode { None, Octahedron, Gradient }
@@ -59,8 +60,8 @@ public class World : MonoBehaviour
         string vertStringFull = (Resources.Load("VerticesDictionary") as TextAsset).text;
         string triStringFull = (Resources.Load("TrianglesDictionary") as TextAsset).text;
 
-        string[] arrayItemsV = vertStringFull.Split(new char[] { '|' });
-        string[] arrayItemsT = triStringFull.Split(new char[] { '|' });
+        string[] arrayItemsV = vertStringFull.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+        string[] arrayItemsT = triStringFull.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
         foreach (string item in arrayItemsV)
         {
             string vertsString = item;
@@ -77,7 +78,6 @@ public class World : MonoBehaviour
             }
             vertLookup.Add(vertList.ToArray());
         }
-        vertLookup.RemoveAt(64);
         foreach (string item in arrayItemsT)
         {
             string trisString = item;
@@ -91,7 +91,7 @@ public class World : MonoBehaviour
             }
             triLookup.Add(triList.ToArray());
         }
-        triLookup.RemoveAt(64);
+
     }
     #endregion
 
