@@ -13,7 +13,7 @@ namespace Procedural
 
     public static class Noise
     {
-        public static int seed = 987654321;
+        public static int seed = 8930;
         
         //Arrays of the specific methods used for calculating Noise
         public static NoiseMethod[] fractalPerlin = { Fractal1D, Fractal2D, Fractal3D };

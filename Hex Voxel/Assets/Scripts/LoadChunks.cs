@@ -13,9 +13,9 @@ public class LoadChunks : MonoBehaviour
     bool reloadRenderLists;
 
     static ChunkCoord[] chunkPositions;
-    static RenderDistance[] renderDistances = { new RenderDistance(RenderDistanceName.Short, "ShortRenderDistance.txt", 4096),
-        new RenderDistance(RenderDistanceName.Medium, "MediumRenderDistance.txt", 8192),
-        new RenderDistance(RenderDistanceName.Long, "LongRenderDistance.txt", 16384) };
+    static RenderDistance[] renderDistances = { new RenderDistance(RenderDistanceName.Short, "Assets/Resources/ShortRenderDistance.txt", 4096),
+        new RenderDistance(RenderDistanceName.Medium, "Assets/Resources/MediumRenderDistance.txt", 8192),
+        new RenderDistance(RenderDistanceName.Long, "Assets/Resources/LongRenderDistance.txt", 16384) };
 
     int timer = 0;
     ChunkCoord previousPos;

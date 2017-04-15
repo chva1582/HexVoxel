@@ -56,8 +56,8 @@ public class World : MonoBehaviour
     #region Variable Setup
     void LookupTableConstruction()
     {
-        string vertStringFull = PlayerPrefs.GetString("Vertices Dictionary");
-        string triStringFull = PlayerPrefs.GetString("Triangles Dictionary");
+        string vertStringFull = (Resources.Load("VerticesDictionary") as TextAsset).text;
+        string triStringFull = (Resources.Load("TrianglesDictionary") as TextAsset).text;
 
         string[] arrayItemsV = vertStringFull.Split(new char[] { '|' });
         string[] arrayItemsT = triStringFull.Split(new char[] { '|' });
