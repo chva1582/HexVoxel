@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum DebugMode { None, Octahedron, Gradient }
@@ -51,8 +52,8 @@ public class World : MonoBehaviour
         string vertStringFull = PlayerPrefs.GetString("Vertices Dictionary");
         string triStringFull = PlayerPrefs.GetString("Triangles Dictionary");
 
-        string[] arrayItemsV = vertStringFull.Split(new char[] { '|' });
-        string[] arrayItemsT = triStringFull.Split(new char[] { '|' });
+        string[] arrayItemsV = vertStringFull.Split(new string[] { Environment.NewLine },StringSplitOptions.None);
+        string[] arrayItemsT = triStringFull.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
         foreach (string item in arrayItemsV)
         {
             string vertsString = item;

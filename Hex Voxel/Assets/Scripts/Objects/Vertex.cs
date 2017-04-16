@@ -154,24 +154,29 @@ public class Vertex
             }
             string vertString = string.Empty;
             string triString = string.Empty;
+            List<Vector3> checkList = new List<Vector3>();
             foreach (var vert in verts)
             {
-                vertString += ((int)vert.x).ToString() + "," + ((int)vert.y).ToString() + "," + ((int)vert.z).ToString() + ".";
+                if (!checkList.Contains(vert))
+                {
+                    checkList.Add(vert);
+                    vertString += ((int)vert.x).ToString() + "," + ((int)vert.y).ToString() + "," + ((int)vert.z).ToString() + ".";
+                }
             }
             foreach (var tri in tris)
             {
-                triString += tri.ToString() + ".";
+                triString += checkList.FindIndex(x=>x==verts[tri]).ToString() + ".";
             }
-            totalVert += vertString + "|";
-            totalTri += triString + "|";
+            totalVert += vertString + "\r\n";
+            totalTri += triString + "\r\n";
         }
         Debug.Log(totalTri);
         Debug.Log(totalVert);
         //
         PlayerPrefs.SetString("Vertices Dictionary", totalVert);
         PlayerPrefs.SetString("Triangles Dictionary", totalTri);
-        System.IO.File.WriteAllText("C:/Users/charl/OneDrive/Documents/GitHub/HexVoxel/Hex Voxel/Vertices Dictionary.txt", totalVert);
-        System.IO.File.WriteAllText("C:/Users/charl/OneDrive/Documents/GitHub/HexVoxel/Hex Voxel/Triangles Dictionary.txt", totalTri);
+        System.IO.File.WriteAllText("C:/Users/charl/Documents/Github/HexVoxel/Hex Voxel/Vertices Dictionary.txt", totalVert);
+        System.IO.File.WriteAllText("C:/Users/charl/Documents/Github/HexVoxel/Hex Voxel/Triangles Dictionary.txt", totalTri);
         //Debug.Log(PlayerPrefs.GetString("Vertices Dictionary"));
         //Debug.Log(PlayerPrefs.GetString("Triangles Dictionary"));
         //BuildThirdSlant();
