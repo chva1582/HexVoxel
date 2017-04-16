@@ -112,7 +112,7 @@ public class World : MonoBehaviour
     {
         if (!areaLoad)
         {
-            CreateChunk(new ChunkCoord(-1, -2, 1));
+            CreateChunk(new ChunkCoord(-1, 0, -1));
             //CreateChunk(new ChunkCoord(3, -2, 3));
         }
         LookupTableConstruction();
@@ -154,6 +154,7 @@ public class World : MonoBehaviour
         {
             newChunk = Instantiate(chunk, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0)) as GameObject;
             Chunk chunkScript = newChunk.GetComponent<Chunk>();
+            chunkScript.meshRecalculate = flatRender;
             chunkScript.chunkCoords = pos;
             chunkScript.world = GetComponent<World>();
             chunks.Add(chunkScript.chunkCoords, chunkScript);

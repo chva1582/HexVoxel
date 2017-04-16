@@ -54,7 +54,7 @@ public class LoadChunks : MonoBehaviour
         {
             FindChunksToLoad();
             LoadAndRenderChunks();
-            //DeleteChunks();
+            DeleteChunks();
         }
 
     }

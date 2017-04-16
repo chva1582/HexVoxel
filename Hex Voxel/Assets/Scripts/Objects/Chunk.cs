@@ -30,9 +30,10 @@ public class Chunk : MonoBehaviour
     List<HexCell> verts = new List<HexCell>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
-    List<HexCell> vertTemp = new List<HexCell>();
-    List<int> vertFail = new List<int>();
     List<int> vertSuccess = new List<int>();
+    List<HexCell> vertTemp = new List<HexCell>();
+    HashSet<HexCell> checkSet = new HashSet<HexCell>();
+    Dictionary<HexCell, int> indexLookup = new Dictionary<HexCell, int>();
 
     //Public Objects
     public World world;
@@ -124,7 +125,7 @@ public class Chunk : MonoBehaviour
         FindCorners();
 
         //Find values if near surface
-        //if (!uniform)
+        if (!uniform)
             GenerateMesh(new Vector3(chunkSize, chunkSize, chunkSize));
 
         //Mesh Finalizing Procedure
@@ -159,6 +160,8 @@ public class Chunk : MonoBehaviour
         uniform = false;
         corners = new float[2, 2, 2];
         cornerInitialized = new bool[2, 2, 2];
+        checkSet.Clear();
+        indexLookup.Clear();
         verts.Clear();
         tris.Clear();
         normals.Clear();
@@ -308,9 +311,7 @@ public class Chunk : MonoBehaviour
     /// <param name="center">0-point of the octahedron to be built</param>
     void Build(HexCell center)
     {
-        vertTemp = new List<HexCell>();
-        vertSuccess = new List<int>();
-        vertFail = new List<int>();
+        vertSuccess.Clear();
         GetHitList(center);
         bool[] hitList = new bool[6];
         foreach (int success in vertSuccess)
@@ -327,16 +328,36 @@ public class Chunk : MonoBehaviour
         if (tempVertArray == null)
             tempVertArray = new HexCell[0];
 
-        List<int> tempTempTri = new List<int>();
-        foreach (int tri in tempTriArray)
-            tempTempTri.Add(tri + verts.Count);
+        
+        if (world.flatRender)
+        {
+            List<HexCell> temptempVert = new List<HexCell>();
+            foreach (HexCell vert in tempVertArray)
+                temptempVert.Add(vert + center);
 
-        List<HexCell> temptempVert = new List<HexCell>();
-        foreach (HexCell vert in tempVertArray)
-            temptempVert.Add(vert + center);
+            foreach (int tri in tempTriArray)
+                tris.Add(tri + verts.Count);
 
-        tris.AddRange(tempTempTri);
-        verts.AddRange(temptempVert);
+            verts.AddRange(temptempVert);
+        }
+        else
+        {
+            foreach (HexCell vert in tempVertArray)
+            {
+                if (checkSet.Add(vert + center))
+                {
+                    indexLookup.Add(vert + center, verts.Count);
+                    verts.Add(vert + center);
+                }
+            }
+
+            foreach (int tri in tempTriArray)
+            {
+                int index;
+                indexLookup.TryGetValue(tempVertArray[tri] + center, out index);
+                tris.Add(index);
+            }
+        }
 
         BuildThirdSlant(center);
     }
@@ -351,12 +372,7 @@ public class Chunk : MonoBehaviour
         {
             HexCell vert = (center + hexPoints[i]);
             if (CheckHit(vert))
-            {
-                vertTemp.Add(vert);
                 vertSuccess.Add(i);
-            }
-            else
-                vertFail.Add(i);
         }
     }
 
@@ -379,15 +395,20 @@ public class Chunk : MonoBehaviour
             vertTemp.Add(center);
             vertTemp.Add(center + hexPoints[2] + hexPoints[5]);
             vertTemp.Add(center + hexPoints[1]);
-            for (int i = 0; i < 6; i++)
+            foreach (HexCell vert in vertTemp)
             {
-                verts.Add(vertTemp[i]);
-                tris.Add(vertCount + i);
+                if (checkSet.Add(vert))
+                {
+                    indexLookup.Add(vert, verts.Count);
+                    verts.Add(vert);
+                }
             }
-            for (int i = 0; i < 6; i++)
+
+            for (int index = 0; index < 6; index++)
             {
-                verts.Add(vertTemp[5 - i]);
-                tris.Add(vertCount + 6 + i);
+                int i;
+                indexLookup.TryGetValue(vertTemp[index], out i);
+                tris.Add(i);
             }
         }
     }
