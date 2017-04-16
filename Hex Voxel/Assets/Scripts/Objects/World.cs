@@ -43,6 +43,7 @@ public class World : MonoBehaviour
     public static bool island = true;
     public bool offsetLand;
     public bool smoothLand;
+    public bool flatRender;
     public bool reloadRenderLists;
     public RenderDistanceName renderDistance;
     public GameObject chunk;
@@ -57,8 +58,18 @@ public class World : MonoBehaviour
     #region Variable Setup
     void LookupTableConstruction()
     {
-        string vertStringFull = (Resources.Load("VerticesDictionary") as TextAsset).text;
-        string triStringFull = (Resources.Load("TrianglesDictionary") as TextAsset).text;
+        string vertStringFull = string.Empty;
+        string triStringFull = string.Empty;
+        if (flatRender)
+        {
+            vertStringFull = (Resources.Load("FlatVerticesDictionary") as TextAsset).text;
+            triStringFull = (Resources.Load("FlatTrianglesDictionary") as TextAsset).text;
+        }
+        else
+        {
+            vertStringFull = (Resources.Load("CloudVerticesDictionary") as TextAsset).text;
+            triStringFull = (Resources.Load("CloudTrianglesDictionary") as TextAsset).text;
+        }
 
         string[] arrayItemsV = vertStringFull.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
         string[] arrayItemsT = triStringFull.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);

@@ -124,7 +124,7 @@ public class Chunk : MonoBehaviour
         FindCorners();
 
         //Find values if near surface
-        if (!uniform)
+        //if (!uniform)
             GenerateMesh(new Vector3(chunkSize, chunkSize, chunkSize));
 
         //Mesh Finalizing Procedure
