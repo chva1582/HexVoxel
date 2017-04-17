@@ -110,7 +110,6 @@ public class LoadChunks : MonoBehaviour
                 chunk.update = true;
             updateSet.Remove(updateList[0]);
             updateList.RemoveAt(0);
-            print(string.Empty);
         }
     }
 

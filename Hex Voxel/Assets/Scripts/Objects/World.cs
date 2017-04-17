@@ -37,6 +37,7 @@ public class World : MonoBehaviour
     #endregion
 
     #region Object Variables
+    public string worldName;
     public bool pointLoc;
     public bool showNormals;
     public bool areaLoad;
@@ -112,7 +113,7 @@ public class World : MonoBehaviour
     {
         if (!areaLoad)
         {
-            CreateChunk(new ChunkCoord(-1, 0, -1));
+            CreateChunk(new ChunkCoord(-1, 0, 0));
             //CreateChunk(new ChunkCoord(3, -2, 3));
         }
         LookupTableConstruction();
@@ -188,6 +189,8 @@ public class World : MonoBehaviour
         Chunk targetChunk = GetChunk(ChunkToPos(chunkCoord));
         if (targetChunk == null)
             print(targetChunk.chunkCoords);
+        if(targetChunk.edited)
+            Serialization.SaveChunk(targetChunk);
         targetChunk.gameObject.SetActive(false);
         chunkPool.Enqueue(targetChunk.gameObject);
         chunks.Remove(chunkCoord);

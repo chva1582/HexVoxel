@@ -47,8 +47,10 @@ public class Chunk : MonoBehaviour
     bool[] neighborExists = new bool[6];
 
     //Edited Points
-    float[,,] editedValues = new float[chunkSize, chunkSize, chunkSize];
-    Vector3[,,] editedNormals = new Vector3[chunkSize, chunkSize, chunkSize];
+    public bool edited;
+    public float[,,] editedValues = new float[chunkSize, chunkSize, chunkSize];
+    public Normal[,,] editedNormals = new Normal[chunkSize, chunkSize, chunkSize];
+    public NoiseData EditedData { get { return new NoiseData(editedValues, editedNormals); } }
 
     //Corners for Interpolation
     public float[,,] corners = new float[2, 2, 2];
@@ -96,6 +98,7 @@ public class Chunk : MonoBehaviour
         coll = gameObject.GetComponent<MeshCollider>();
         mesh = new Mesh();
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
+        Serialization.LoadChunk(this);
         StartGeneration();
     }
 
@@ -108,6 +111,7 @@ public class Chunk : MonoBehaviour
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
         ResetValues();
         bounds.Reset();
+        Serialization.LoadChunk(this);
         StartGeneration();
     }
 
@@ -488,6 +492,7 @@ public class Chunk : MonoBehaviour
         {
             
         }
+        edited = true;
     }
 
     public void EditPointNormal(HexCell cell, Vector3 change)
@@ -501,6 +506,7 @@ public class Chunk : MonoBehaviour
         {
             
         }
+        edited = true;
     }
 
     float GetNoise(HexCoord coord)
