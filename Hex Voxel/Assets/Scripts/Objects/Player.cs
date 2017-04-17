@@ -35,9 +35,7 @@ public class Player : MonoBehaviour
         TimerCheck();
         if (Input.GetButton("Fire1"))
         {
-            RaycastHit hit;
-            if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 5))
-                print(hit.point.ToString());
+            PointEdit();
         }
 
         body.useGravity = !(playerMovement == PlayerMovement.Flying);
@@ -85,26 +83,26 @@ public class Player : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out hit, 5))
         {
-            print(hit.point.ToString());
             Chunk chunk = world.GetChunk(hit.point);
             HexCoord hexUnrounded = chunk.PosToHex(hit.point);
             HexCell hexCenter = hexUnrounded.ToHexCell();
-            for (int i = -2; i <= 2; i++)
+            for (int i = -1; i <= 1; i++)
             {
-                for (int j = -2; j <= 2; j++)
+                for (int j = -1; j <= 1; j++)
                 {
-                    for (int k = -2; k <= 2; k++)
+                    for (int k = -1; k <= 1; k++)
                     {
 
                         HexCell hex = new HexCell(hexCenter.x + i, hexCenter.y + j, hexCenter.z + k);
                         Vector3 point = chunk.HexToPos(hex);
-                        Vector3 c = point - hexUnrounded.ToVector3();
-                        float distanceStrength = 1 / (Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2));
-                        Vector3 changeNormal = new Vector3(-2 * c.x / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)),
+                        Vector3 c = 2 * point - hexUnrounded.ToVector3();
+                        float distanceStrength = 10 / (Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2));
+                        Vector3 changeNormal = 10 * new Vector3(-2 * c.x / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)),
                             -2 * c.y / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)),
                             -2 * c.z / (Mathf.Pow(Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2), 2)));
                         chunk.EditPointValue(hex, distanceStrength);
                         chunk.EditPointNormal(hex, changeNormal);
+                        gameObject.GetComponent<LoadChunks>().AddToUpdateList(chunk.chunkCoords);
                     }
                 }
             }

@@ -8,6 +8,7 @@ public class LoadChunks : MonoBehaviour
     World world;
 
     List<ChunkCoord> updateList = new List<ChunkCoord>();
+    HashSet<ChunkCoord> updateSet = new HashSet<ChunkCoord>();
     List<ChunkCoord> buildList = new List<ChunkCoord>();
 
     bool reloadRenderLists;
@@ -104,10 +105,19 @@ public class LoadChunks : MonoBehaviour
         for (int i = 0; i < updateList.Count; i++)
         {
             Chunk chunk = world.GetChunk(World.ChunkToPos(updateList[0]));
+            chunk.GeometricUpdateChunk();
             if (chunk != null)
                 chunk.update = true;
+            updateSet.Remove(updateList[0]);
             updateList.RemoveAt(0);
+            print(string.Empty);
         }
+    }
+
+    public void AddToUpdateList(ChunkCoord chunk)
+    {
+        if (updateSet.Add(chunk))
+            updateList.Add(chunk);
     }
 
     /// <summary>

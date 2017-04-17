@@ -276,6 +276,27 @@ public class World : MonoBehaviour
         else
             return Procedural.Noise.noiseMethods[1][2](pos, noiseScale).derivative;
     }
+
+
+    /// <summary>
+    /// Checks if a point is on the edge of a surface using IVT and gradients
+    /// </summary>
+    /// <param name="point">Hex point to check</param>
+    /// <returns>Boolean</returns>
+    public bool GradientCheck(HexWorldCoord point)
+    {
+        Vector3 gradient = World.GetNormal(point);
+        gradient = gradient.normalized;
+        if (!World.Land(point + World.PosToHex(gradient)) && World.Land(point - World.PosToHex(gradient)))
+            return true;
+        Vector3 gradientHigh = World.GetNormal(point + World.PosToHex(gradient * 0.5f));
+        Vector3 gradientLow = World.GetNormal(point - World.PosToHex(gradient * 0.5f));
+        gradientHigh = gradientHigh.normalized * Chunk.sqrt3 * 0.25f;
+        gradientLow = gradientLow.normalized * Chunk.sqrt3 * 0.25f;
+        if (!World.Land(point + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) && World.Land(point - World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientLow)))
+            return true;
+        return false;
+    }
     #endregion
 
     #region Conversions
