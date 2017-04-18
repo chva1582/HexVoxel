@@ -6,15 +6,13 @@ namespace Procedural
 {
     
     //Points to the functions to be used for Noise calculations
-    public delegate NoiseSample NoiseMethod(Vector3 point, float frequency);
+    public delegate NoiseSample NoiseMethod(Vector3 point, float frequency, float seed);
 
     //What type of Noise is it
     public enum NoiseMethodType { Value, Perlin}
 
     public static class Noise
     {
-        public static int seed = 8930;
-        
         //Arrays of the specific methods used for calculating Noise
         public static NoiseMethod[] fractalPerlin = { Fractal1D, Fractal2D, Fractal3D };
         public static NoiseMethod[] perlinMethods = { Perlin1D, Perlin2D, Perlin3D};
@@ -77,9 +75,9 @@ namespace Procedural
         #endregion
 
         #region Value Noise
-        public static NoiseSample Value1D (Vector3 point, float frequency)
+        public static NoiseSample Value1D (Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int i0 = Mathf.FloorToInt(point.x);
             float t = point.x - i0;
@@ -102,9 +100,9 @@ namespace Procedural
             return sample * (1f / hashMask);
         }
 
-        public static NoiseSample Value2D (Vector3 point, float frequency)
+        public static NoiseSample Value2D (Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -143,9 +141,9 @@ namespace Procedural
             return sample * (1f / hashMask);
         }
 
-        public static NoiseSample Value3D(Vector3 point, float frequency)
+        public static NoiseSample Value3D(Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -203,9 +201,9 @@ namespace Procedural
         #endregion
 
         #region Perlin Noise
-        public static NoiseSample Perlin1D(Vector3 point, float frequency)
+        public static NoiseSample Perlin1D(Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int i0 = Mathf.FloorToInt(point.x);
             float t0 = point.x - i0;
@@ -236,9 +234,9 @@ namespace Procedural
             return sample * 2f;
         }
 
-        public static NoiseSample Perlin2D(Vector3 point, float frequency)
+        public static NoiseSample Perlin2D(Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -288,9 +286,9 @@ namespace Procedural
             return sample * Mathf.Sqrt(2);
         }
 
-        public static NoiseSample Perlin3D(Vector3 point, float frequency)
+        public static NoiseSample Perlin3D(Vector3 point, float frequency, float seed)
         {
-            point += new Vector3(seed, seed, seed);
+            point += new Vector3(seed/1000000, (seed%1000000)/1000, seed%1000);
             point *= frequency;
             int ix0 = Mathf.FloorToInt(point.x);
             int iy0 = Mathf.FloorToInt(point.y);
@@ -369,19 +367,19 @@ namespace Procedural
         #endregion
 
         #region Fractal
-        public static NoiseSample Fractal1D(Vector3 point, float frequency)
+        public static NoiseSample Fractal1D(Vector3 point, float frequency, float seed)
         {
-            return Sum(Perlin1D, point, frequency, 3, 25f, 0.05f);
+            return Sum(Perlin1D, point, frequency, seed, 3, 5f, 0.1f);
         }
 
-        public static NoiseSample Fractal2D(Vector3 point, float frequency)
+        public static NoiseSample Fractal2D(Vector3 point, float frequency, float seed)
         {
-            return Sum(Perlin2D, point, frequency, 3, 25f, 0.05f);
+            return Sum(Perlin2D, point, frequency, seed, 3, 5f, 0.1f);
         }
 
-        public static NoiseSample Fractal3D(Vector3 point, float frequency)
+        public static NoiseSample Fractal3D(Vector3 point, float frequency, float seed)
         {
-            return Sum(Perlin3D, point, frequency, 3, 25f, 0.05f);
+            return Sum(Perlin3D, point, frequency, seed, 3, 5f, 0.1f);
         }
         #endregion
 
@@ -406,9 +404,9 @@ namespace Procedural
             return g.x * x + g.y * y + g.z * z;
         }
 
-        public static NoiseSample Sum(NoiseMethod method, Vector3 point, float frequency, int octaves, float lacunarity, float persistence)
+        public static NoiseSample Sum(NoiseMethod method, Vector3 point, float frequency, float seed, int octaves, float lacunarity, float persistence)
         {
-            NoiseSample sum = method(point, frequency);
+            NoiseSample sum = method(point, frequency, seed);
             float amplitude = 1f;
             float range = 1f;
             for (int o = 1; o < octaves; o++)
@@ -416,7 +414,7 @@ namespace Procedural
                 frequency *= lacunarity;
                 amplitude *= persistence;
                 range += amplitude;
-                sum += method(point, frequency) * amplitude;
+                sum += method(point, frequency, seed) * amplitude;
             }
             return sum * (1f / range);
         }

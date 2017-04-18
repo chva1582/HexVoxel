@@ -55,9 +55,9 @@ public class LoadChunks : MonoBehaviour
         {
             FindChunksToLoad();
             LoadAndRenderChunks();
-            DeleteChunks();
+            if(world.removeChunks)
+                DeleteChunks();
         }
-
     }
 
     /// <summary>
@@ -134,7 +134,12 @@ public class LoadChunks : MonoBehaviour
                     chunksToDelete.Add(chunk.Key);
             }
             foreach (ChunkCoord chunk in chunksToDelete)
-                world.DestroyChunk(chunk);
+            {
+                if (world.fadeIn)
+                    world.GetChunk(chunk).FadeOutCall();
+                else
+                    world.DestroyChunk(chunk);
+            }
             timer = 0;
         }
         timer++;

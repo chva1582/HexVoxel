@@ -102,7 +102,7 @@ public class SurfaceCreator : MonoBehaviour
             for (int x = 0; x <= res; x++, n++)
             {
                 Vector3 point = Vector3.Lerp(point0, point1, (float)x / res);
-                NoiseSample sample = Procedural.Noise.Sum(method, Vector3.Scale(point, size), frequency, octaves, lacunarity, persistence);
+                NoiseSample sample = Procedural.Noise.Sum(method, Vector3.Scale(point, size), frequency, 0, octaves, lacunarity, persistence);
                 sample = type == Procedural.NoiseMethodType.Value ? (sample - 0.5f) : (sample * 0.5f);
                 sample.value = sample.value < flatBottom - .5f ? flatBottom - .5f : sample.value;
                 if (coloringForStrength)
@@ -115,7 +115,7 @@ public class SurfaceCreator : MonoBehaviour
                     sample *= amplitude;
                     colors[n] = coloring.Evaluate(sample.value + 0.5f);
                 }
-                if (Procedural.Noise.Perlin3D(point, 50).value > .4f && sample.value>-4f && sample.value<.5f && sample.derivative.magnitude < 1)
+                if (Procedural.Noise.Perlin3D(point, 50, 0).value > .4f && sample.value>-4f && sample.value<.5f && sample.derivative.magnitude < 1)
                 {
                     float ranAngle = Random.Range(0, 2 * Mathf.PI);
                     float treeControl = Random.Range(0, 2);
@@ -123,7 +123,7 @@ public class SurfaceCreator : MonoBehaviour
                     GameObject clone = Instantiate(treeControl<.5f?DecidousTree:ConiferTree, new Vector3(point.x,sample.value,point.z), ranRot, transform) as GameObject;
                     clone.transform.localScale = new Vector3(.005f, .005f, .005f);
                 }
-                if (Procedural.Noise.Perlin3D(new Vector3(point.x,100,point.z), 3).value > .6f && sample.value > -4f)
+                if (Procedural.Noise.Perlin3D(new Vector3(point.x,100,point.z), 3, 0).value > .6f && sample.value > -4f)
                 {
                     float rockControl = Random.Range(0, 4);
                     Quaternion ranRot = Random.rotation;

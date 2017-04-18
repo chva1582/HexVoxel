@@ -41,10 +41,12 @@ public class World : MonoBehaviour
     public bool pointLoc;
     public bool showNormals;
     public bool areaLoad;
+    public bool removeChunks;
     public static bool island = true;
     public bool offsetLand;
     public bool smoothLand;
     public bool flatRender;
+    public bool fadeIn;
     public bool reloadRenderLists;
     public RenderDistanceName renderDistance;
     public GameObject chunk;
@@ -160,10 +162,20 @@ public class World : MonoBehaviour
             chunkScript.chunkCoords = pos;
             chunkScript.world = GetComponent<World>();
 
-            if(flatRender)
-                newChunk.GetComponent<Renderer>().material = Resources.Load("Terrain") as Material;
+            if (fadeIn)
+            {
+                if (flatRender)
+                    newChunk.GetComponent<Renderer>().material = Resources.Load("TerrainFade") as Material;
+                else
+                    newChunk.GetComponent<Renderer>().material = Resources.Load("TerrainBackCullOffFade") as Material;
+            }
             else
-                newChunk.GetComponent<Renderer>().material = Resources.Load("TerrainBackCullOff") as Material;
+            {
+                if (flatRender)
+                    newChunk.GetComponent<Renderer>().material = Resources.Load("Terrain") as Material;
+                else
+                    newChunk.GetComponent<Renderer>().material = Resources.Load("TerrainBackCullOff") as Material;
+            }
 
             chunks.Add(chunkScript.chunkCoords, chunkScript);
         }
@@ -185,6 +197,23 @@ public class World : MonoBehaviour
             return null;
         }
             
+    }
+
+    /// <summary>
+    /// Find the Chunk at a current position
+    /// </summary>
+    /// <param name="pos">True Position of test point</param>
+    /// <returns>Chunk script</returns>
+    public Chunk GetChunk(ChunkCoord chunkCoord)
+    {
+        Chunk output;
+        if (chunks.TryGetValue(chunkCoord, out output))
+            return output;
+        else
+        {
+            return null;
+        }
+
     }
 
     /// <summary>
@@ -234,45 +263,45 @@ public class World : MonoBehaviour
         }
     }
 
-    public static bool Land(HexWorldCoord point)
+    public bool Land(HexWorldCoord point)
     {
         return GetNoise(point) < threshold;
     }
 
-    public static float GetNoise(HexWorldCoord hex)
+    public float GetNoise(HexWorldCoord hex)
     {
         Vector3 pos = HexToPos(hex);
         float noise;
         if (pos.y > -15)
         {
-            noise = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).value * 20 + hex.y * thresDropOff;
+            noise = Procedural.Noise.noiseMethods[2][2](hex.ToVector3(), noiseScale, worldName.GetHashCode()).value * 20 + hex.y * thresDropOff;
             if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386); }
         }
         else
         {
             Vector3 basePos = new Vector3(pos.x, -15, pos.z);
             HexWorldCoord baseHex = PosToHex(basePos);
-            noise = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).value * 20 + baseHex.y * thresDropOff;
+            noise = Procedural.Noise.noiseMethods[2][2](baseHex.ToVector3(), noiseScale, worldName.GetHashCode()).value * 20 + baseHex.y * thresDropOff;
             if (island) { noise += 100 * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386); }
             noise += 5 * (Mathf.Pow(-pos.y - 15,0.35f));
         }
         return noise;
     }
 
-    public static Vector3 GetNormal(HexWorldCoord hex)
+    public Vector3 GetNormal(HexWorldCoord hex)
     {
         Vector3 pos = HexToPos(hex);
         Vector3 gradient;
         if (pos.y > -15)
         {
-            gradient = Procedural.Noise.noiseMethods[1][2](hex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+            gradient = Procedural.Noise.noiseMethods[2][2](hex.ToVector3(), noiseScale, worldName.GetHashCode()).derivative * 20 + new Vector3(0, thresDropOff, 0);
             if (island) { gradient += 100 * new Vector3(pos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(pos.x, 2) + Mathf.Pow(pos.z, 2)) - 10386)); }
         }
         else
         {
             Vector3 basePos = new Vector3(pos.x, -15, pos.z);
             HexWorldCoord baseHex = PosToHex(basePos);
-            gradient = Procedural.Noise.noiseMethods[1][2](baseHex.ToVector3(), noiseScale).derivative * 20 + new Vector3(0, thresDropOff, 0);
+            gradient = Procedural.Noise.noiseMethods[2][2](baseHex.ToVector3(), noiseScale, worldName.GetHashCode()).derivative * 20 + new Vector3(0, thresDropOff, 0);
             if (island) { gradient += 100 * new Vector3(basePos.x * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386), 0, pos.z * Mathf.Log(islandDropOff) * Mathf.Pow(islandDropOff, (Mathf.Pow(basePos.x, 2) + Mathf.Pow(basePos.z, 2)) - 10386)); }
             gradient = new Vector3(gradient.x, -1.75f * Mathf.Pow(-pos.y-15,-0.65f), gradient.z);
         }
@@ -282,9 +311,9 @@ public class World : MonoBehaviour
     public static Vector3 GetNormalNonTerrain(Vector3 pos, bool normalized = true)
     {
         if (normalized)
-            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale).derivative.normalized;
+            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale, 0).derivative.normalized;
         else
-            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale).derivative;
+            return Procedural.Noise.noiseMethods[1][2](pos, noiseScale, 0).derivative;
     }
 
 

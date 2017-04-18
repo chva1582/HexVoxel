@@ -1,6 +1,7 @@
 ﻿//A group of points of square size organized in octahedral coordinates
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -15,6 +16,7 @@ public class Chunk : MonoBehaviour
     public bool rendered = true;
     public bool cornersReady;
     bool uniform;
+    bool fading;
 
     //Measurements
     public static int chunkSize = 8;
@@ -100,6 +102,8 @@ public class Chunk : MonoBehaviour
         gameObject.name = "Chunk (" + chunkCoords.x + ", " + chunkCoords.y + ", " + chunkCoords.z + ")";
         Serialization.LoadChunk(this);
         StartGeneration();
+        if(world.fadeIn)
+            StartCoroutine("FadeIn");
     }
 
     /// <summary>
@@ -113,6 +117,8 @@ public class Chunk : MonoBehaviour
         bounds.Reset();
         Serialization.LoadChunk(this);
         StartGeneration();
+        if(world.fadeIn)
+            StartCoroutine("FadeIn");
     }
 
     /// <summary>
@@ -151,6 +157,7 @@ public class Chunk : MonoBehaviour
     void ResetValues()
     {
         uniform = false;
+        fading = false;
         corners = new float[2, 2, 2];
         cornerInitialized = new bool[2, 2, 2];
         checkSet.Clear();
@@ -529,9 +536,9 @@ public class Chunk : MonoBehaviour
         HexCell cell = coord.ToHexCell();
         try
         {
-            return World.GetNoise(HexToWorldHex(coord)) + editedValues[cell.x, cell.y, cell.z];
+            return world.GetNoise(HexToWorldHex(coord)) + editedValues[cell.x, cell.y, cell.z];
         }
-        catch { return World.GetNoise(HexToWorldHex(coord)); }
+        catch { return world.GetNoise(HexToWorldHex(coord)); }
     }
 
     Vector3 GetNormal(HexCoord coord)
@@ -539,9 +546,46 @@ public class Chunk : MonoBehaviour
         HexCell cell = coord.ToHexCell();
         try
         {
-            return World.GetNormal(HexToWorldHex(coord)) + editedNormals[cell.x, cell.y, cell.z];
+            return world.GetNormal(HexToWorldHex(coord)) + editedNormals[cell.x, cell.y, cell.z];
         }
-        catch { return World.GetNormal(HexToWorldHex(coord)); }
+        catch { return world.GetNormal(HexToWorldHex(coord)); }
+    }
+    #endregion
+
+    #region Fade
+    IEnumerator FadeIn()
+    {
+        Material mat = GetComponent<Renderer>().material;
+        while (mat.color.a < 1)
+        {
+            mat.color = new Color(mat.color.r, mat.color.g, mat.color.b, mat.color.a + Time.deltaTime);
+            yield return null;
+        }
+        
+        if (world.flatRender)
+            mat = Resources.Load("Terrain") as Material;
+        else
+            mat = Resources.Load("TerrainBackCullOff") as Material;
+        GetComponent<Renderer>().material = mat;
+    }
+
+    public void FadeOutCall()
+    {
+        if (!fading)
+            StartCoroutine("FadeOut");
+    }
+
+    IEnumerator FadeOut()
+    {
+        fading = true;
+        Material mat = GetComponent<Renderer>().material;
+        mat.color = new Color(mat.color.r, mat.color.g, mat.color.b, 1);
+        while (mat.color.a > 0)
+        {
+            mat.color = new Color(mat.color.r, mat.color.g, mat.color.b, mat.color.a - Time.deltaTime);
+            yield return null;
+        }
+        world.DestroyChunk(chunkCoords);
     }
     #endregion
 
