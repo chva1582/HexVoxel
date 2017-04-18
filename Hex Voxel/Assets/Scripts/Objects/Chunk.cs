@@ -147,6 +147,7 @@ public class Chunk : MonoBehaviour
         //Mesh Finalizing Procedure
         mesh.RecalculateBounds();
         if (meshRecalculate) { mesh.RecalculateNormals(); }
+        coll.sharedMesh = null;
         filter.mesh = mesh;
         coll.sharedMesh = mesh;
     }
