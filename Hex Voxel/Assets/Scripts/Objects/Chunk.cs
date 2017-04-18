@@ -326,6 +326,21 @@ public class Chunk : MonoBehaviour
         
         if (world.flatRender)
         {
+            for (int i = 0; i < tempTriArray.Length/3; i++)
+            {
+                int tri1 = tempTriArray[3 * i];
+                int tri2 = tempTriArray[3 * i + 1];
+                int tri3 = tempTriArray[3 * i + 2];
+
+                Vector3 left = HexToPos(center + tempVertArray[tri2]) - HexToPos(center + tempVertArray[tri1]);
+                Vector3 right = HexToPos(center + tempVertArray[tri3]) - HexToPos(center + tempVertArray[tri1]);
+
+                if(!TriNormCheck(HexToPos(center), Vector3.Cross(left, right)))
+                {
+                    tempTriArray[3 * i] = tri3;
+                    tempTriArray[3 * i + 2] = tri1;
+                }
+            }
             List<HexCell> temptempVert = new List<HexCell>();
             foreach (HexCell vert in tempVertArray)
                 temptempVert.Add(vert + center);
@@ -460,7 +475,7 @@ public class Chunk : MonoBehaviour
             }
             if (world.offsetLand)
             {
-                offset = World.GetNormalNonTerrain((HexToPos(hexCell) + smooth) * 9) + .3f * World.GetNormalNonTerrain((HexToPos(hexCell) + smooth) * 27);
+                offset = .4f * World.GetNormalNonTerrain((HexToPos(hexCell) + smooth) * 27);
             }  
             posVerts.Add(HexToPos(hexCell) + offset + smooth);
         }
@@ -661,11 +676,11 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region Debug
-    void CreatePoint(HexCoord location)
+    void CreatePoint(HexCoord location, bool forced = false)
     {
         HexCell posLoc = new HexCell((byte)Mathf.RoundToInt(location.x), (byte)Mathf.RoundToInt(location.y), (byte)Mathf.RoundToInt(location.z));
         Vector3 warpedLocation = HexToPos(posLoc);
-        if (world.pointLoc)
+        if (world.pointLoc || forced)
         {
             GameObject copy = Instantiate(dot, warpedLocation, new Quaternion(0, 0, 0, 0)) as GameObject;
             copy.transform.parent = gameObject.transform;

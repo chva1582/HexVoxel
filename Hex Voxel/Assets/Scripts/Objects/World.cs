@@ -138,7 +138,7 @@ public class World : MonoBehaviour
     /// <param name="pos">Chunk Coords of the Chunk to be created</param>
     public void CreateChunk(ChunkCoord pos)
     {
-        if (chunks.ContainsKey(pos))//This is kind of cheating this should have already been checked by some were getting through
+        if (chunks.ContainsKey(pos))//This is kind of cheating this should have already been checked but some were getting through
             return;
         GameObject newChunk;
         if (chunkPool.Count > 0)
@@ -154,10 +154,17 @@ public class World : MonoBehaviour
         else
         {
             newChunk = Instantiate(chunk, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0)) as GameObject;
+
             Chunk chunkScript = newChunk.GetComponent<Chunk>();
             chunkScript.meshRecalculate = flatRender;
             chunkScript.chunkCoords = pos;
             chunkScript.world = GetComponent<World>();
+
+            if(flatRender)
+                newChunk.GetComponent<Renderer>().material = Resources.Load("Terrain") as Material;
+            else
+                newChunk.GetComponent<Renderer>().material = Resources.Load("TerrainBackCullOff") as Material;
+
             chunks.Add(chunkScript.chunkCoords, chunkScript);
         }
     }
@@ -288,16 +295,18 @@ public class World : MonoBehaviour
     /// <returns>Boolean</returns>
     public bool GradientCheck(HexWorldCoord point)
     {
-        Vector3 gradient = World.GetNormal(point);
+        Vector3 gradient = GetNormal(point);
         gradient = gradient.normalized;
-        if (!World.Land(point + World.PosToHex(gradient)) && World.Land(point - World.PosToHex(gradient)))
+        if (!Land(point + PosToHex(gradient)) && Land(point - PosToHex(gradient)))
             return true;
-        Vector3 gradientHigh = World.GetNormal(point + World.PosToHex(gradient * 0.5f));
-        Vector3 gradientLow = World.GetNormal(point - World.PosToHex(gradient * 0.5f));
-        gradientHigh = gradientHigh.normalized * Chunk.sqrt3 * 0.25f;
-        gradientLow = gradientLow.normalized * Chunk.sqrt3 * 0.25f;
-        if (!World.Land(point + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) && World.Land(point - World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientLow)))
-            return true;
+
+        //Vector3 gradientHigh = GetNormal(point + PosToHex(gradient * 0.5f));
+        //Vector3 gradientLow = GetNormal(point - PosToHex(gradient * 0.5f));
+        //gradientHigh = gradientHigh.normalized * Chunk.sqrt3 * 0.25f;
+        //gradientLow = gradientLow.normalized * Chunk.sqrt3 * 0.25f;
+        //if (!Land(point + PosToHex(gradient * 0.5f) + PosToHex(gradientHigh)) && Land(point - PosToHex(gradient * 0.5f) + PosToHex(gradientLow)))
+        //    return true;
+
         return false;
     }
     #endregion
