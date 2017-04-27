@@ -55,21 +55,21 @@ public class PointData : MonoBehaviour
             Gizmos.color = world.Land(World.PosToHex(pos - gradient)) ? Color.red : Color.blue;
             Gizmos.DrawSphere(pos - gradient, .05f);
 
-            print(pos.y);
-            print("Gradient: " + gradient.ToString());
+            //print(pos.y);
+            //print("Gradient: " + gradient.ToString());
 
-            Vector3 gradientHigh = world.GetNormal(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f));
-            Vector3 gradientLow = world.GetNormal(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f));
-            gradientHigh = gradientHigh.normalized * 0.5f;
-            gradientLow = gradientLow.normalized * 0.5f;
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(pos + gradient / 2, pos + gradient / 2 + gradientHigh);
-            Gizmos.color = Color.blue;
-            Gizmos.DrawLine(pos - gradient / 2, pos - gradient / 2 - gradientLow);
-            Gizmos.color = world.Land(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) ? Color.red : Color.blue;
-            Gizmos.DrawSphere(pos + gradient / 2 + gradientHigh, .02f);
-            Gizmos.color = world.Land(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f) - World.PosToHex(gradientLow)) ? Color.red : Color.blue;
-            Gizmos.DrawSphere(pos - gradient / 2 - gradientLow, .02f);
+            //Vector3 gradientHigh = world.GetNormal(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f));
+            //Vector3 gradientLow = world.GetNormal(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f));
+            //gradientHigh = gradientHigh.normalized * 0.5f;
+            //gradientLow = gradientLow.normalized * 0.5f;
+            //Gizmos.color = Color.red;
+            //Gizmos.DrawLine(pos + gradient / 2, pos + gradient / 2 + gradientHigh);
+            //Gizmos.color = Color.blue;
+            //Gizmos.DrawLine(pos - gradient / 2, pos - gradient / 2 - gradientLow);
+            //Gizmos.color = world.Land(World.PosToHex(pos) + World.PosToHex(gradient * 0.5f) + World.PosToHex(gradientHigh)) ? Color.red : Color.blue;
+            //Gizmos.DrawSphere(pos + gradient / 2 + gradientHigh, .02f);
+            //Gizmos.color = world.Land(World.PosToHex(pos) - World.PosToHex(gradient * 0.5f) - World.PosToHex(gradientLow)) ? Color.red : Color.blue;
+            //Gizmos.DrawSphere(pos - gradient / 2 - gradientLow, .02f);
         }
     }
 
