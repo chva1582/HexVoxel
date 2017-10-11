@@ -41,6 +41,7 @@ public class World : MonoBehaviour
     public bool pointLoc;
     public bool showNormals;
     public bool areaLoad;
+    public bool loadOldChunk;
     public bool removeChunks;
     public static bool island = true;
     int heightBoundary = -15;
@@ -114,9 +115,9 @@ public class World : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        if (!areaLoad)
+        if (!areaLoad && loadOldChunk)
         {
-            CreateChunk(new ChunkCoord(-2, -2, 3));
+            CreateChunk(new ChunkCoord(-2, 0, 3));
             //CreateChunk(new ChunkCoord(3, -2, 3));
         }
         LookupTableConstruction();
@@ -435,7 +436,7 @@ public class World : MonoBehaviour
         output.x = chunkCoord.x * Chunk.chunkSize;
         output.y = chunkCoord.y * Chunk.chunkSize;
         output.z = chunkCoord.z * Chunk.chunkSize;
-        output += new HexWorldCoord(1,1,1);
+        //output += new HexWorldCoord(1,1,1);
         return HexToPos(output);
     }
 

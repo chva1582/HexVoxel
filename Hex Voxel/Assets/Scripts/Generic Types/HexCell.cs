@@ -49,6 +49,16 @@ public struct HexCell
         return new HexCell((sbyte)(w1.x - w2.x), (sbyte)(w1.y - w2.y), (sbyte)(w1.z - w2.z));
     }
 
+    public static bool operator ==(HexCell w1, HexCell w2)
+    {
+        return w1.Equals(w2);
+    }
+
+    public static bool operator !=(HexCell w1, HexCell w2)
+    {
+        return !w1.Equals(w2);
+    }
+
     public HexCoord ToHexCoord()
     {
         HexCoord output = new HexCoord();

@@ -37,6 +37,11 @@ public struct HexWorldCell
         return new HexWorldCell(w1.x + w2.x, w1.y + w2.y, w1.z + w2.z);
     }
 
+    public static HexWorldCell operator -(HexWorldCell w1, HexWorldCell w2)
+    {
+        return new HexWorldCell(w1.x - w2.x, w1.y - w2.y, w1.z - w2.z);
+    }
+
     public HexWorldCoord ToHexWorldCoord()
     {
         HexWorldCoord output = new HexWorldCoord();

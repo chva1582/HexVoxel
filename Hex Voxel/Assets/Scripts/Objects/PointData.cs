@@ -16,12 +16,13 @@ public class PointData : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.gray;
-        Gizmos.DrawSphere(transform.position, 1);
-
         //Only shows gizmos when the object is selected not the parents
         if (Selection.activeGameObject != transform.gameObject)
             return;
+
+        Gizmos.color = Color.gray;
+        Gizmos.DrawSphere(transform.position, 1);
+        print(chunk.PosToHex(transform.position).ToHexCell());
 
         Vector3 pos = transform.position;
         //Shows the Octahedron grid at the point and prints some info

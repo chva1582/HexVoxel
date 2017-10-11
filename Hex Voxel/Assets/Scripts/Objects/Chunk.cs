@@ -351,12 +351,16 @@ public class Chunk : MonoBehaviour
             }
             List<HexCell> temptempVert = new List<HexCell>();
             foreach (HexCell vert in tempVertArray)
+            {
                 temptempVert.Add(vert + center);
+                print(vert + center);
+            }
 
             foreach (int tri in tempTriArray)
                 tris.Add(tri + verts.Count);
 
             verts.AddRange(temptempVert);
+            print(string.Empty);
         }
         else
         {
