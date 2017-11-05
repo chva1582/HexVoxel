@@ -89,10 +89,10 @@ public struct Edge
             neighbors = rightRidgeNeighbors[ridge.Direction];
 
         neighbors = neighbors.Select(x => x + startPoint).ToList();
-        neighbors = (from neighbor in neighbors
-                    where (!chunk.DeadNeighborCheck(new Edge(ridge,neighbor,chunk)) &&
-                        !((startPoint - endPoint == neighbor - vertex) || (startPoint - endPoint == vertex - neighbor)))
-                    select neighbor).ToList();
+        //neighbors = (from neighbor in neighbors
+        //            where (!chunk.DeadNeighborCheck(new Edge(ridge,neighbor,chunk)) &&
+        //                !((startPoint - endPoint == neighbor - vertex) || (startPoint - endPoint == vertex - neighbor)))
+        //            select neighbor).ToList();
         neighbors.Remove(vertex);
         return neighbors;
     }

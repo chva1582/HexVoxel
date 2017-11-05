@@ -29,6 +29,10 @@ public class CNetChunk : MonoBehaviour
     List<Vector3> verts = new List<Vector3>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
+
+    bool shift;
+    bool ctrl;
+
 #endregion
 
     #region Start & Update
@@ -41,35 +45,53 @@ public class CNetChunk : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyUp(KeyCode.Return) && facesToBuild.Count != 0)
+        if ((Input.GetKeyUp(KeyCode.Return) || net.autoGrow) && facesToBuild.Count != 0)
         {
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             for (int i = 0; i < (shift ? 10 : 1); i++)
-            {
-                Edge nextRidge = GetNextEdge();
-                List<HexCell> neighborPoints = nextRidge.FindNeighborPoints();
-                if (ctrl)
-                {
-                    print("For Edge " + nextRidge.Start + " - " + nextRidge.End);
-                    foreach (HexCell point in neighborPoints)
-                        print(point + ": " + GetNoise(point.ToHexCoord()));
-                }
-                HexCell nextVert = neighborPoints.Aggregate(
-                    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
-                BuildTriangle(new Edge(nextRidge.End, nextRidge.Start, nextVert, this));
-                //print(deadRidges.Count);
-            }
+                ConstructFromNextEdge();
         }
+
+        shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
     }
 
     public void Restart()
     {
         mesh.Clear();
+        verts.Clear();
+        tris.Clear();
+        normals.Clear();
+        deadRidges.Clear();
+        liveRidges.Clear();
+        facesToBuild.Clear();
     }
     #endregion
 
     #region Build
+    public void ConstructFromNextEdge()
+    {
+        Edge nextEdge = GetNextEdge();
+        List<HexCell> neighborPoints = nextEdge.FindNeighborPoints();
+        if (ctrl)
+        {
+            print("For Edge " + nextEdge.Start + " - " + nextEdge.End);
+            foreach (HexCell point in neighborPoints)
+                print(point + ": " + GetNoise(point.ToHexCoord()));
+        }
+
+        neighborPoints = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor.ToHexCoord()))).ToList();
+
+        int neighborIndex = 0;
+        while (!LegalFace(new Edge(nextEdge.ridge, neighborPoints[neighborIndex], this), nextEdge.vertex))
+            neighborIndex++; 
+
+        //HexCell nextVert = neighborPoints.Aggregate(
+        //    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
+
+        BuildTriangle(new Edge(nextEdge.End, nextEdge.Start, neighborPoints[neighborIndex], this));
+        //print(deadRidges.Count);
+    }
+
     public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
     {
         Edge edge = new Edge(start, end, origin, this);
@@ -162,7 +184,28 @@ public class CNetChunk : MonoBehaviour
         return edge;
     }
 
-    public bool DeadNeighborCheck(Edge face)
+    #region Checks
+    /// <summary>
+    /// Checks if the planned face violates any geometric rules
+    /// </summary>
+    /// <param name="face">Face to check</param>
+    /// <returns>If face is legal</returns>
+    public bool LegalFace(Edge face, HexCell oldVert)
+    {
+        if (DeadNeighbor(face))
+            return false;
+        if (IsoplanarFaces(face, oldVert))
+            return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Checks if a planned face will contact a pre-existing dead ridge
+    /// Only non-ridge edges will be checked
+    /// </summary>
+    /// <param name="face">Face to check</param>
+    /// <returns>If non-ridge segments are dead</returns>
+    bool DeadNeighbor(Edge face)
     {
         if (deadRidges.Count == 0)
             return false;
@@ -170,10 +213,25 @@ public class CNetChunk : MonoBehaviour
             || deadRidges.Contains(new Ridge(face.End, face.vertex, this)) || deadRidges.Contains(new Ridge(face.vertex, face.End, this));
     }
 
+    /// <summary>
+    /// Checks if the new face lies in the same plane as the old one
+    /// Only returns true if the surface "folds" making a zero volume space
+    /// </summary>
+    /// <param name="face">Face to Check</param>
+    /// <param name="oldVert">Vertex of Previous Face</param>
+    /// <returns>If the new face intersects the previous face</returns>
+    bool IsoplanarFaces(Edge face, HexCell oldVert)
+    {
+        HexCell ridgeVector = face.Start - face.End;
+        HexCell verticesVector = face.vertex - oldVert;
+        return ((ridgeVector == verticesVector) || (ridgeVector == -1 * verticesVector));
+    }
+
     public bool LiveNeighborCheck(Ridge ridge)
     {
         return liveRidges.Contains(ridge) || liveRidges.Contains(new Ridge(ridge.end, ridge.start, ridge.chunk));
     }
+#endregion
 
     #region Noise Values
     float GetNoise(HexCoord coord)

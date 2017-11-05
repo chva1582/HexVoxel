@@ -110,6 +110,11 @@ public struct HexCell
         return new HexCell((sbyte)(w1.X - w2.X), (sbyte)(w1.Y - w2.Y), (sbyte)(w1.Z - w2.Z));
     }
 
+    public static HexCell operator *(int i, HexCell w)
+    {
+        return new HexCell((sbyte)(-1 * w.X), (sbyte)(-1 * w.Y), (sbyte)(-1 * w.Z));
+    }
+
     public static bool operator ==(HexCell w1, HexCell w2)
     {
         return w1.Equals(w2);

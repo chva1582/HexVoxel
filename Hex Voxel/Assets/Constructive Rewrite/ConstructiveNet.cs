@@ -7,6 +7,7 @@ public class ConstructiveNet : MonoBehaviour
     public GameObject ChunkObject;
     List<CNetChunk> chunks = new List<CNetChunk>();
 
+    public bool autoGrow;
     public bool showNextEdge;
 
     HexCell initPoint1 = new HexCell(2, 1, 4);
