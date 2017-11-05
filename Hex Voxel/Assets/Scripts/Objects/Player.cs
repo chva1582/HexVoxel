@@ -93,7 +93,7 @@ public class Player : MonoBehaviour
                     for (int k = -1; k <= 1; k++)
                     {
 
-                        HexCell hex = new HexCell(hexCenter.x + i, hexCenter.y + j, hexCenter.z + k);
+                        HexCell hex = new HexCell(hexCenter.X + i, hexCenter.Y + j, hexCenter.Z + k);
                         Vector3 point = chunk.HexToPos(hex);
                         Vector3 c = 2 * point - hexUnrounded.ToVector3();
                         float distanceStrength = 10 / (Mathf.Pow(c.x, 2) + Mathf.Pow(c.y, 2) + Mathf.Pow(c.z, 2));

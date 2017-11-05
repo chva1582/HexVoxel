@@ -14,11 +14,11 @@ public class CNetChunk : MonoBehaviour
 
     public ChunkCoord chunkCoords;
 
-    public Queue<FaceEdge> facesToBuild = new Queue<FaceEdge>();
-    HashSet<Edge> deadEdges = new HashSet<Edge>();
-    HashSet<Edge> liveEdges = new HashSet<Edge>(); 
+    public Queue<Edge> facesToBuild = new Queue<Edge>();
+    HashSet<Ridge> deadRidges = new HashSet<Ridge>();
+    HashSet<Ridge> liveRidges = new HashSet<Ridge>(); 
 
-    public int[,,] edgeInfos = new int[8, 8, 8];
+    public int[,,] RidgeInfos = new int[8, 8, 8];
 
     public HexWorldCoord HexOffset { get { return World.PosToHex(World.ChunkToPos(chunkCoords)); } }
     public Vector3 PosOffset { get { return World.ChunkToPos(chunkCoords); } }
@@ -43,26 +43,41 @@ public class CNetChunk : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.Return) && facesToBuild.Count != 0)
         {
-            FaceEdge nextEdge = GetNextEdge();
-            List<HexCell> neighborPoints = nextEdge.FindNeighborPoints();
-            //foreach (HexCell point in neighborPoints)
-            //    print(point + ": " + GetNoise(point.ToHexCoord()));
-            HexCell nextVert = neighborPoints.Aggregate(
-                (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
-            BuildTriangle(new FaceEdge(nextEdge.End, nextEdge.Start, nextVert, this));
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            for (int i = 0; i < (shift ? 10 : 1); i++)
+            {
+                Edge nextRidge = GetNextEdge();
+                List<HexCell> neighborPoints = nextRidge.FindNeighborPoints();
+                if (ctrl)
+                {
+                    print("For Edge " + nextRidge.Start + " - " + nextRidge.End);
+                    foreach (HexCell point in neighborPoints)
+                        print(point + ": " + GetNoise(point.ToHexCoord()));
+                }
+                HexCell nextVert = neighborPoints.Aggregate(
+                    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
+                BuildTriangle(new Edge(nextRidge.End, nextRidge.Start, nextVert, this));
+                //print(deadRidges.Count);
+            }
         }
+    }
+
+    public void Restart()
+    {
+        mesh.Clear();
     }
     #endregion
 
     #region Build
     public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
     {
-        FaceEdge edge = new FaceEdge(start, end, origin, this);
+        Edge edge = new Edge(start, end, origin, this);
         EdgeToBuild(edge);
-        BuildTriangle(edge);
+        BuildTriangle(edge, true);
     }
 
-    public void BuildTriangle(HexCell start, HexCell end, HexCell origin)
+    public void BuildTriangle(HexCell start, HexCell end, HexCell origin, bool freeFloating = false)
     {
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
@@ -75,12 +90,13 @@ public class CNetChunk : MonoBehaviour
         }
 
         if(facesToBuild.Count != 0 && net.showNextEdge)
-            DrawEdge(facesToBuild.Peek().edge);
+            DrawRidge(facesToBuild.Peek().ridge);
 
-        EdgeToBuild(new FaceEdge(end, origin, start, this));
-        EdgeToBuild(new FaceEdge(origin, start, end, this));
+        EdgeToBuild(new Edge(end, origin, start, this));
+        EdgeToBuild(new Edge(origin, start, end, this));
 
-        deadEdges.Add(new Edge(start, end, this));
+        if(!freeFloating)
+            deadRidges.Add(new Ridge(start, end, this));
 
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
@@ -88,7 +104,7 @@ public class CNetChunk : MonoBehaviour
         filter.mesh = mesh;
     }
 
-    public void BuildTriangle(FaceEdge edge)
+    public void BuildTriangle(Edge edge, bool freeFloating = false)
     {
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
@@ -101,12 +117,13 @@ public class CNetChunk : MonoBehaviour
         }
 
         if (facesToBuild.Count != 0 && net.showNextEdge)
-            DrawEdge(facesToBuild.Peek().edge);
+            DrawRidge(facesToBuild.Peek().ridge);
 
-        EdgeToBuild(new FaceEdge(edge.End, edge.vertex, edge.Start, this));
-        EdgeToBuild(new FaceEdge(edge.vertex, edge.Start, edge.End, this));
+        EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start, this));
+        EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End, this));
 
-        deadEdges.Add(edge.edge);
+        if(!freeFloating)
+        deadRidges.Add(edge.ridge);
 
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
@@ -115,44 +132,47 @@ public class CNetChunk : MonoBehaviour
     }
     #endregion
 
-    void EdgeToBuild(FaceEdge edge)
+    void EdgeToBuild(Edge edge)
     {
-        if (!LiveNeighborCheck(edge.edge))
+        if (!LiveNeighborCheck(edge.ridge))
         {
             facesToBuild.Enqueue(edge);
-            liveEdges.Add(edge.edge);
-            print(edge.edge.Type.ToString() + ", " + edge.edge.Direction + " :" + edge.edge.start);
-            print(edge.edge.YChange);
+            liveRidges.Add(edge.ridge);
+            //print("Added Live Edge: Start " + edge.ridge.start + ", End " + edge.ridge.end);
+            //print(edge.ridge.Type.ToString() + ", " + edge.ridge.Direction + " :" + edge.ridge.start);
+            //print(edge.ridge.YChange);
         }
         else
         {
-            liveEdges.Remove(edge.edge);
-            liveEdges.Remove(edge.edge.ReversedEdge);
+            liveRidges.Remove(edge.ridge);
+            liveRidges.Remove(edge.ridge.ReversedRidge);
+            deadRidges.Add(edge.ridge);
+            //print("Added Dead Edge: Start " + edge.ridge.start + ", End " + edge.ridge.end);
         }
     }
 
-    FaceEdge GetNextEdge()
+    Edge GetNextEdge()
     {
-        FaceEdge edge;
+        Edge edge;
         do
         {
             edge = facesToBuild.Dequeue();
-        } while (!liveEdges.Contains(edge.edge));
-        liveEdges.Remove(edge.edge);
+        } while (!liveRidges.Contains(edge.ridge));
+        liveRidges.Remove(edge.ridge);
         return edge;
     }
 
-    public bool DeadNeighborCheck(FaceEdge face)
+    public bool DeadNeighborCheck(Edge face)
     {
-        if (deadEdges.Count == 0)
+        if (deadRidges.Count == 0)
             return false;
-        return deadEdges.Contains(new Edge(face.Start, face.vertex, this)) || deadEdges.Contains(new Edge(face.vertex, face.Start, this))
-            || deadEdges.Contains(new Edge(face.End, face.vertex, this)) || deadEdges.Contains(new Edge(face.vertex, face.End, this));
+        return deadRidges.Contains(new Ridge(face.Start, face.vertex, this)) || deadRidges.Contains(new Ridge(face.vertex, face.Start, this))
+            || deadRidges.Contains(new Ridge(face.End, face.vertex, this)) || deadRidges.Contains(new Ridge(face.vertex, face.End, this));
     }
 
-    public bool LiveNeighborCheck(Edge edge)
+    public bool LiveNeighborCheck(Ridge ridge)
     {
-        return liveEdges.Contains(edge) || liveEdges.Contains(new Edge(edge.end, edge.start, edge.chunk));
+        return liveRidges.Contains(ridge) || liveRidges.Contains(new Ridge(ridge.end, ridge.start, ridge.chunk));
     }
 
     #region Noise Values
@@ -178,9 +198,9 @@ public class CNetChunk : MonoBehaviour
     #endregion
 
     #region Debug
-    void DrawEdge(Edge edge)
+    void DrawRidge(Ridge ridge)
     {
-        CNetDebug.DrawEdge(HexToPos(edge.start), HexToPos(edge.end), Color.red);
+        CNetDebug.DrawRidge(HexToPos(ridge.start), HexToPos(ridge.end), Color.red);
     }
     #endregion
 
@@ -222,14 +242,14 @@ public class CNetChunk : MonoBehaviour
     #region Structs
     struct CNetChunkCorners
     {
-        public List<Edge> xp;
-        public List<Edge> xn;
-        public List<Edge> yp;
-        public List<Edge> yn;
-        public List<Edge> zp;
-        public List<Edge> zn;
+        public List<Ridge> xp;
+        public List<Ridge> xn;
+        public List<Ridge> yp;
+        public List<Ridge> yn;
+        public List<Ridge> zp;
+        public List<Ridge> zn;
 
-        public CNetChunkCorners(List<Edge> xp, List<Edge> xn, List<Edge> yp, List<Edge> yn, List<Edge> zp, List<Edge> zn)
+        public CNetChunkCorners(List<Ridge> xp, List<Ridge> xn, List<Ridge> yp, List<Ridge> yn, List<Ridge> zp, List<Ridge> zn)
         {
             this.xp = xp;
             this.xn = xn;

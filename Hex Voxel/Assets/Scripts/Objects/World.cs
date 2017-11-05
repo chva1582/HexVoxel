@@ -87,9 +87,9 @@ public class World : MonoBehaviour
                 if (vert == "")
                     continue;
                 HexCell extractedVert = new HexCell();
-                extractedVert.x = sbyte.Parse(vert.Split(new char[] { ',' })[0]);
-                extractedVert.y = sbyte.Parse(vert.Split(new char[] { ',' })[1]);
-                extractedVert.z = sbyte.Parse(vert.Split(new char[] { ',' })[2]);
+                extractedVert.X = sbyte.Parse(vert.Split(new char[] { ',' })[0]);
+                extractedVert.Y = sbyte.Parse(vert.Split(new char[] { ',' })[1]);
+                extractedVert.Z = sbyte.Parse(vert.Split(new char[] { ',' })[2]);
                 vertList.Add(extractedVert);
             }
             vertLookup.Add(vertList.ToArray());

@@ -513,7 +513,7 @@ public class Chunk : MonoBehaviour
         update = false;
         try
         {
-            editedValues[cell.x, cell.y, cell.z] += change;
+            editedValues[cell.X, cell.Y, cell.Z] += change;
         }
         catch 
         {
@@ -527,7 +527,7 @@ public class Chunk : MonoBehaviour
         update = false;
         try
         {
-            editedNormals[cell.x, cell.y, cell.z] += change;
+            editedNormals[cell.X, cell.Y, cell.Z] += change;
         }
         catch
         {
@@ -541,7 +541,7 @@ public class Chunk : MonoBehaviour
         HexCell cell = coord.ToHexCell();
         try
         {
-            return world.GetNoise(HexToWorldHex(coord)) + editedValues[cell.x, cell.y, cell.z];
+            return world.GetNoise(HexToWorldHex(coord)) + editedValues[cell.X, cell.Y, cell.Z];
         }
         catch { return world.GetNoise(HexToWorldHex(coord)); }
     }
@@ -551,7 +551,7 @@ public class Chunk : MonoBehaviour
         HexCell cell = coord.ToHexCell();
         try
         {
-            return world.GetNormal(HexToWorldHex(coord)) + editedNormals[cell.x, cell.y, cell.z];
+            return world.GetNormal(HexToWorldHex(coord)) + editedNormals[cell.X, cell.Y, cell.Z];
         }
         catch { return world.GetNormal(HexToWorldHex(coord)); }
     }
@@ -656,8 +656,8 @@ public class Chunk : MonoBehaviour
     public bool CheckHit(HexCell point)
     {
         bool output;
-        if (point.x < chunkSize && point.x > -1 && point.y < chunkSize && point.y > -1 && point.z < chunkSize && point.z > -1)
-            output = vertexes[(int)(point.x + .5f), (int)(point.y + .5f), (int)(point.z + .5f)];
+        if (point.X < chunkSize && point.X > -1 && point.Y < chunkSize && point.Y > -1 && point.Z < chunkSize && point.Z > -1)
+            output = vertexes[(int)(point.X + .5f), (int)(point.Y + .5f), (int)(point.Z + .5f)];
         else
         {
             try
