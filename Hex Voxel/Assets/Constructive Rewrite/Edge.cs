@@ -12,13 +12,22 @@ public struct Edge
     public HexCell Start { get { return ridge.start; } }
     public HexCell End { get { return ridge.end; } }
 
+    public Vector3 SeperationPlaneNormal
+    {
+        get
+        {
+            Vector3 ridgeDir = ridge.DirectionVector.normalized;
+            return new Vector3(ridgeDir.z, 0, -1 * ridgeDir.x);
+        }
+    }
+
     #region PreCalculated Values
-    static HexCell p0 = new HexCell(0, 0, 1), p0l = new HexCell(1, -1, 1), p0hf = new HexCell(0, 1, 1),
-        p1 = new HexCell(1, 0, 1), p1h = new HexCell(0, 1, 0), p1lf = new HexCell(2, -1, 1),
-        p2 = new HexCell(1, 0, 0), p2l = new HexCell(1, -1, 0), p2hf = new HexCell(0, 1, -1),
-        p3 = new HexCell(0, 0, -1), p3h = new HexCell(-1, 1, -1), p3lf = new HexCell(0, -1, -1),
-        p4 = new HexCell(-1, 0, -1), p4l = new HexCell(0, -1, 0), p4hf = new HexCell(-2, 1, -1),
-        p5 = new HexCell(-1, 0, 0), p5h = new HexCell(-1, 1, 0), p5lf = new HexCell(0, -1, 1);
+    static HexCell p0 = new HexCell(0, 0, 1), p0l = new HexCell(1, -1, 1), p0hf = new HexCell(0, 1, 1), p0hd = new HexCell(-1,2,0),
+        p1 = new HexCell(1, 0, 1), p1h = new HexCell(0, 1, 0), p1lf = new HexCell(2, -1, 1), p1ld = new HexCell(2, -2, 1),
+        p2 = new HexCell(1, 0, 0), p2l = new HexCell(1, -1, 0), p2hf = new HexCell(0, 1, -1), p2hd = new HexCell(-1, 2, -1),
+        p3 = new HexCell(0, 0, -1), p3h = new HexCell(-1, 1, -1), p3lf = new HexCell(0, -1, -1), p3ld = new HexCell(1, -2, 0),
+        p4 = new HexCell(-1, 0, -1), p4l = new HexCell(0, -1, 0), p4hf = new HexCell(-2, 1, -1), p4hd = new HexCell(-2, 2, -1),
+        p5 = new HexCell(-1, 0, 0), p5h = new HexCell(-1, 1, 0), p5lf = new HexCell(0, -1, 1), p5ld = new HexCell(1, -2, 1);
 
     static List<HexCell>[] flatRidgeNeighbors = new List<HexCell>[6]
     {
@@ -32,22 +41,32 @@ public struct Edge
 
     static List<HexCell>[] longRidgeNeighbors = new List<HexCell>[6]
     {
-        new List<HexCell>(){p1,p0,p1h,p5h},
-        new List<HexCell>(){p2,p1,p2l,p0l},
-        new List<HexCell>(){p3,p2,p3h,p1h},
-        new List<HexCell>(){p4,p3,p4l,p2l},
-        new List<HexCell>(){p5,p4,p5h,p3h},
-        new List<HexCell>(){p0,p5,p0l,p4l}
+        new List<HexCell>(){p1,p0,p1h,p5h,},//p0l,p0hd},
+        new List<HexCell>(){p2,p1,p2l,p0l,},//p1h,p1ld},
+        new List<HexCell>(){p3,p2,p3h,p1h,},//p2l,p2hd},
+        new List<HexCell>(){p4,p3,p4l,p2l,},//p3h,p3ld},
+        new List<HexCell>(){p5,p4,p5h,p3h,},//p4l,p4hd},
+        new List<HexCell>(){p0,p5,p0l,p4l,},//p5h,p5ld}
     };
 
     static List<HexCell>[] rightRidgeNeighbors = new List<HexCell>[6]
     {
-        new List<HexCell>(){p1,p0,p2,p5,p2l,p4l,p1lf,p5lf},
-        new List<HexCell>(){p2,p1,p3,p0,p3h,p5h,p2hf,p0hf},
-        new List<HexCell>(){p3,p2,p4,p1,p4l,p0l,p3lf,p1lf},
-        new List<HexCell>(){p4,p3,p5,p2,p5h,p1h,p4hf,p2hf},
-        new List<HexCell>(){p5,p4,p0,p3,p0l,p2l,p5lf,p3lf},
-        new List<HexCell>(){p0,p5,p1,p4,p1h,p3h,p0hf,p4hf}
+        new List<HexCell>(){p1,p0,p2,p5,p2l,p4l,p1lf,p5lf,},//p1h,p5h,p0hf,p3ld},
+        new List<HexCell>(){p2,p1,p3,p0,p3h,p5h,p2hf,p0hf,},//p2l,p0l,p1lf,p4hd},
+        new List<HexCell>(){p3,p2,p4,p1,p4l,p0l,p3lf,p1lf,},//p3h,p1h,p2hf,p5ld},
+        new List<HexCell>(){p4,p3,p5,p2,p5h,p1h,p4hf,p2hf,},//p4l,p2l,p3lf,p0hd},
+        new List<HexCell>(){p5,p4,p0,p3,p0l,p2l,p5lf,p3lf,},//p5h,p3h,p4hf,p1ld},
+        new List<HexCell>(){p0,p5,p1,p4,p1h,p3h,p0hf,p4hf,},//p0l,p4l,p5lf,p2hd}
+    };
+
+    static List<HexCell>[] maceRidgeNeighbors = new List<HexCell>[6]
+    {
+        new List<HexCell>(){p5h,p1h,p0hf,p3h},
+        new List<HexCell>(){p0l,p2l,p1lf,p4l},
+        new List<HexCell>(){p1h,p3h,p2hf,p5h},
+        new List<HexCell>(){p2l,p4l,p3lf,p0l},
+        new List<HexCell>(){p3h,p5h,p4hf,p1h},
+        new List<HexCell>(){p4l,p0l,p5lf,p2l}
     };
     #endregion
 

@@ -72,14 +72,14 @@ public class CNetChunk : MonoBehaviour
     {
         Edge nextEdge = GetNextEdge();
         List<HexCell> neighborPoints = nextEdge.FindNeighborPoints();
+        neighborPoints = OrganizeNeighbors(neighborPoints, nextEdge.ridge);
+
         if (ctrl)
         {
             print("For Edge " + nextEdge.Start + " - " + nextEdge.End);
             foreach (HexCell point in neighborPoints)
                 print(point + ": " + GetNoise(point.ToHexCoord()));
         }
-
-        neighborPoints = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor.ToHexCoord()))).ToList();
 
         int neighborIndex = 0;
         while (!LegalFace(new Edge(nextEdge.ridge, neighborPoints[neighborIndex], this), nextEdge.vertex))
@@ -184,6 +184,46 @@ public class CNetChunk : MonoBehaviour
         return edge;
     }
 
+    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, bool fudgeFactor = true)
+    {
+        neighborPoints = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor.ToHexCoord()))).ToList();
+        if (fudgeFactor)
+        {
+            float minimum = Mathf.Abs(GetNoise(neighborPoints[0].ToHexCoord()));
+            List<HexCell> similarWithLiveEdge = new List<HexCell>();
+            bool triggered = false;
+            for (int i = 1; i < neighborPoints.Count; i++)
+            {
+                if (Mathf.Abs(GetNoise(neighborPoints[i].ToHexCoord())) - minimum < 0.1)
+                {
+                    if (LiveNeighborCheck(new Edge(ridge, neighborPoints[i], this)))
+                    {
+                        similarWithLiveEdge.Add(neighborPoints[i]);
+                        neighborPoints.Remove(neighborPoints[i]);
+                    }
+                    triggered = true;
+                }
+                else
+                    break;
+            }
+            if (triggered)
+            {
+                if (LiveNeighborCheck(new Edge(ridge, neighborPoints[0], this)))
+                {
+                    List<HexCell> minimumPoint = new List<HexCell>();
+                    minimumPoint.Add(neighborPoints[0]);
+                    neighborPoints.Remove(neighborPoints[0]);
+                    neighborPoints = minimumPoint.Concat(similarWithLiveEdge).Concat(neighborPoints).ToList();
+                }
+                else
+                {
+                    neighborPoints = similarWithLiveEdge.Concat(neighborPoints).ToList();
+                }
+            }
+        }
+        return neighborPoints;
+    }
+
     #region Checks
     /// <summary>
     /// Checks if the planned face violates any geometric rules
@@ -193,9 +233,26 @@ public class CNetChunk : MonoBehaviour
     public bool LegalFace(Edge face, HexCell oldVert)
     {
         if (DeadNeighbor(face))
+        {
+            if (ctrl) { print("Dead Neighbor"); }
             return false;
+        }
+
         if (IsoplanarFaces(face, oldVert))
+        {
+            if (ctrl) { print("Isoplanar"); }
             return false;
+        }
+
+        if (FoldBack(face, oldVert))
+        {
+            if (AntiNormal(face))
+            {
+                if (ctrl) { print("Fold Back"); }
+                return false;
+            }
+            if (ctrl) { print("Concave Fold"); }
+        }
         return true;
     }
 
@@ -227,11 +284,44 @@ public class CNetChunk : MonoBehaviour
         return ((ridgeVector == verticesVector) || (ridgeVector == -1 * verticesVector));
     }
 
+    /// <summary>
+    /// Checks if a new face folds back on itself trapping it to run parallel to the actual face
+    /// </summary>
+    /// <param name="face">Face to Check</param>
+    /// <param name="oldVert">Vertex of Previous Face</param>
+    /// <returns>If the new face is a fold back</returns>
+    bool FoldBack(Edge face, HexCell oldVert)
+    {
+        bool newPositive = 0 < Vector3.Dot(face.SeperationPlaneNormal, World.HexToPos((face.vertex - face.Start).ToHexCoord().ToHexWorldCoord()));
+        bool oldPositive = 0 < Vector3.Dot(face.SeperationPlaneNormal, World.HexToPos((oldVert - face.Start).ToHexCoord().ToHexWorldCoord()));
+        return newPositive == oldPositive;
+    }
+
+    /// <summary>
+    /// Checks if a new face is facing in the opposite direction as the noise
+    /// </summary>
+    /// <param name="face"></param>
+    /// <returns></returns>
+    bool AntiNormal(Edge face)
+    {
+        Vector3 faceNormal = Vector3.Cross(World.HexToPos((face.vertex - face.Start).ToHexCoord().ToHexWorldCoord()), World.HexToPos((face.End - face.Start).ToHexCoord().ToHexWorldCoord()));
+        return Vector3.Angle(faceNormal, GetNormal(face.Start.ToHexCoord())) > 100;
+    }
+
+    bool LiveNeighborCheck(Edge edge)
+    {
+        bool startFor = liveRidges.Contains(new Ridge(edge.Start, edge.vertex, edge.chunk));
+        bool startBack = liveRidges.Contains(new Ridge(edge.vertex, edge.Start, edge.chunk));
+        bool endFor = liveRidges.Contains(new Ridge(edge.End, edge.vertex, edge.chunk));
+        bool endBack = liveRidges.Contains(new Ridge(edge.vertex, edge.End, edge.chunk));
+        return startFor || startBack || endFor || endBack;
+    }
+
     public bool LiveNeighborCheck(Ridge ridge)
     {
         return liveRidges.Contains(ridge) || liveRidges.Contains(new Ridge(ridge.end, ridge.start, ridge.chunk));
     }
-#endregion
+    #endregion
 
     #region Noise Values
     float GetNoise(HexCoord coord)

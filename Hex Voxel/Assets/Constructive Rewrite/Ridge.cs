@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public enum RidgeType { Flat, Long, Right };
+public enum RidgeType { Flat, Long, Right, Mace };
 
 public struct Ridge
 {
@@ -19,6 +19,8 @@ public struct Ridge
     {
         get
         {
+            //if (YChange > 1f)
+            //    return RidgeType.Mace;
             if (Distance > 4.1f)
                 return RidgeType.Long;
             if (YChange > 0.1f)
@@ -41,7 +43,15 @@ public struct Ridge
     {
         get
         {
-            return Vector3.SqrMagnitude(World.HexToPos((start - end).ToHexCoord().ToHexWorldCoord()));
+            return Vector3.SqrMagnitude(DirectionVector);
+        }
+    }
+
+    public Vector3 DirectionVector
+    {
+        get
+        {
+            return World.HexToPos((start - end).ToHexCoord().ToHexWorldCoord());
         }
     }
 
