@@ -39,8 +39,13 @@ public class ConstructiveNet : MonoBehaviour
         return chunk;
     }
 
+    //This along with the method call in update should go in World as soon as the old system is past its use and archived
     void Restart()
     {
+        var logEntries = System.Type.GetType("UnityEditor.LogEntries,UnityEditor.dll");
+        var clearMethod = logEntries.GetMethod("Clear", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+        clearMethod.Invoke(null, null);
+
         print("Restarted");
         chunks[0].Restart();
         chunks[0].BuildFirstTriangle(initPoint1, initPoint2, initPoint3);

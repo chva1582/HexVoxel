@@ -266,8 +266,8 @@ public class CNetChunk : MonoBehaviour
     {
         if (deadRidges.Count == 0)
             return false;
-        return deadRidges.Contains(new Ridge(face.Start, face.vertex, this)) || deadRidges.Contains(new Ridge(face.vertex, face.Start, this))
-            || deadRidges.Contains(new Ridge(face.End, face.vertex, this)) || deadRidges.Contains(new Ridge(face.vertex, face.End, this));
+        return deadRidges.Any(x => x == new Ridge(face.Start, face.vertex, this)) //Contains not using Equals override
+            || deadRidges.Any(x => x == new Ridge(face.End, face.vertex, this)); //Contains not using Equals override
     }
 
     /// <summary>
@@ -308,18 +308,26 @@ public class CNetChunk : MonoBehaviour
         return Vector3.Angle(faceNormal, GetNormal(face.Start.ToHexCoord())) > 100;
     }
 
+    /// <summary>
+    /// Checks if an edge's non-ridge segments are currently live
+    /// </summary>
+    /// <param name="edge">Edge to check</param>
+    /// <returns>If one of the edge's are live</returns>
     bool LiveNeighborCheck(Edge edge)
     {
-        bool startFor = liveRidges.Contains(new Ridge(edge.Start, edge.vertex, edge.chunk));
-        bool startBack = liveRidges.Contains(new Ridge(edge.vertex, edge.Start, edge.chunk));
-        bool endFor = liveRidges.Contains(new Ridge(edge.End, edge.vertex, edge.chunk));
-        bool endBack = liveRidges.Contains(new Ridge(edge.vertex, edge.End, edge.chunk));
-        return startFor || startBack || endFor || endBack;
+        bool startRidge = liveRidges.Any(x => x == new Ridge(edge.Start, edge.vertex, edge.chunk)); //Contains not using Equals override
+        bool endRidge = liveRidges.Any(x => x == new Ridge(edge.End, edge.vertex, edge.chunk)); //Contains not using Equals override
+        return startRidge || endRidge;
     }
 
+    /// <summary>
+    /// Checks if ridge is live
+    /// </summary>
+    /// <param name="ridge">Ridge to check</param>
+    /// <returns>If ridge is alive</returns>
     public bool LiveNeighborCheck(Ridge ridge)
     {
-        return liveRidges.Contains(ridge) || liveRidges.Contains(new Ridge(ridge.end, ridge.start, ridge.chunk));
+        return liveRidges.Any(x => x == ridge); //Contains not using Equals override
     }
     #endregion
 

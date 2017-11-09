@@ -102,7 +102,7 @@ public struct Ridge
     #region Overrides
     public override bool Equals(object obj)
     {
-        return (start == ((Ridge)obj).start && end == ((Ridge)obj).end);
+        return (start == ((Ridge)obj).start && end == ((Ridge)obj).end) || (start == ((Ridge)obj).end && end == ((Ridge)obj).start);
         //if (GetHashCode() == obj.GetHashCode())
         //    return true;
         //return false;
@@ -117,6 +117,16 @@ public struct Ridge
             hash = hash * 227 + end.GetHashCode();
             return hash;
         }
+    }
+
+    public static bool operator ==(Ridge left, Ridge right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(Ridge left, Ridge right)
+    {
+        return !left.Equals(right);
     }
     #endregion
 
