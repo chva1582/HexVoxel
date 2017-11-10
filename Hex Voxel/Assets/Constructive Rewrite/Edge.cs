@@ -1,14 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public struct Edge
+public struct Edge : IEquatable<Edge>
 {
     public Ridge ridge;
     public HexCell vertex;
-    public CNetChunk chunk;
 
+    #region Properties
     public HexCell Start { get { return ridge.start; } }
     public HexCell End { get { return ridge.end; } }
 
@@ -20,6 +21,7 @@ public struct Edge
             return new Vector3(ridgeDir.z, 0, -1 * ridgeDir.x);
         }
     }
+    #endregion
 
     #region PreCalculated Values
     static HexCell p0 = new HexCell(0, 0, 1), p0l = new HexCell(1, -1, 1), p0hf = new HexCell(0, 1, 1), p0hd = new HexCell(-1,2,0),
@@ -71,18 +73,16 @@ public struct Edge
     #endregion
 
     #region Constructors
-    public Edge(Ridge ridge, HexCell vertex, CNetChunk chunk)
+    public Edge(Ridge ridge, HexCell vertex)
     {
         this.ridge = ridge;
         this.vertex = vertex;
-        this.chunk = chunk;
     }
 
-    public Edge(HexCell start, HexCell end, HexCell vertex, CNetChunk chunk)
+    public Edge(HexCell start, HexCell end, HexCell vertex)
     {
-        ridge = new Ridge(start, end, chunk);
+        ridge = new Ridge(start, end);
         this.vertex = vertex;
-        this.chunk = chunk;
     }
     #endregion
 
@@ -98,7 +98,6 @@ public struct Edge
         HexCell startPoint = Start;
         HexCell endPoint = End;
         HexCell vertex = this.vertex;
-        CNetChunk chunk = this.chunk;
 
         if (ridge.Type == RidgeType.Flat)
             neighbors = flatRidgeNeighbors[ridge.Direction];
@@ -114,6 +113,41 @@ public struct Edge
         //            select neighbor).ToList();
         neighbors.Remove(vertex);
         return neighbors;
+    }
+    #endregion
+
+    #region Equals
+    public bool Equals(Edge obj)
+    {
+        bool forward = (ridge == obj.ridge && vertex == obj.vertex);
+        return forward;
+    }
+
+    public override bool Equals(object obj)
+    {
+        bool forward = (ridge == ((Edge)obj).ridge && vertex == ((Edge)obj).vertex);
+        return forward;
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            int hash = 47;
+            hash = hash * 227 + ridge.GetHashCode();
+            hash = hash * 227 + vertex.GetHashCode();
+            return hash;
+        }
+    }
+
+    public static bool operator ==(Edge left, Edge right)
+    {
+        return right.Equals(left);
+    }
+
+    public static bool operator !=(Edge left, Edge right)
+    {
+        return !right.Equals(left);
     }
     #endregion
 }

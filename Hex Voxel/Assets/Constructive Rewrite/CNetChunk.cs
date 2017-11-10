@@ -33,7 +33,7 @@ public class CNetChunk : MonoBehaviour
     bool shift;
     bool ctrl;
 
-#endregion
+    #endregion
 
     #region Start & Update
     void Awake()
@@ -82,19 +82,19 @@ public class CNetChunk : MonoBehaviour
         }
 
         int neighborIndex = 0;
-        while (!LegalFace(new Edge(nextEdge.ridge, neighborPoints[neighborIndex], this), nextEdge.vertex))
+        while (!LegalFace(new Edge(nextEdge.ridge, neighborPoints[neighborIndex]), nextEdge.vertex))
             neighborIndex++; 
 
         //HexCell nextVert = neighborPoints.Aggregate(
         //    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
 
-        BuildTriangle(new Edge(nextEdge.End, nextEdge.Start, neighborPoints[neighborIndex], this));
+        BuildTriangle(new Edge(nextEdge.End, nextEdge.Start, neighborPoints[neighborIndex]));
         //print(deadRidges.Count);
     }
 
     public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
     {
-        Edge edge = new Edge(start, end, origin, this);
+        Edge edge = new Edge(start, end, origin);
         EdgeToBuild(edge);
         BuildTriangle(edge, true);
     }
@@ -114,11 +114,11 @@ public class CNetChunk : MonoBehaviour
         if(facesToBuild.Count != 0 && net.showNextEdge)
             DrawRidge(facesToBuild.Peek().ridge);
 
-        EdgeToBuild(new Edge(end, origin, start, this));
-        EdgeToBuild(new Edge(origin, start, end, this));
+        EdgeToBuild(new Edge(end, origin, start));
+        EdgeToBuild(new Edge(origin, start, end));
 
         if(!freeFloating)
-            deadRidges.Add(new Ridge(start, end, this));
+            deadRidges.Add(new Ridge(start, end));
 
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
@@ -141,8 +141,8 @@ public class CNetChunk : MonoBehaviour
         if (facesToBuild.Count != 0 && net.showNextEdge)
             DrawRidge(facesToBuild.Peek().ridge);
 
-        EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start, this));
-        EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End, this));
+        EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start));
+        EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
 
         if(!freeFloating)
         deadRidges.Add(edge.ridge);
@@ -196,7 +196,7 @@ public class CNetChunk : MonoBehaviour
             {
                 if (Mathf.Abs(GetNoise(neighborPoints[i].ToHexCoord())) - minimum < 0.1)
                 {
-                    if (LiveNeighborCheck(new Edge(ridge, neighborPoints[i], this)))
+                    if (LiveNeighborCheck(new Edge(ridge, neighborPoints[i])))
                     {
                         similarWithLiveEdge.Add(neighborPoints[i]);
                         neighborPoints.Remove(neighborPoints[i]);
@@ -208,7 +208,7 @@ public class CNetChunk : MonoBehaviour
             }
             if (triggered)
             {
-                if (LiveNeighborCheck(new Edge(ridge, neighborPoints[0], this)))
+                if (LiveNeighborCheck(new Edge(ridge, neighborPoints[0])))
                 {
                     List<HexCell> minimumPoint = new List<HexCell>();
                     minimumPoint.Add(neighborPoints[0]);
@@ -266,8 +266,8 @@ public class CNetChunk : MonoBehaviour
     {
         if (deadRidges.Count == 0)
             return false;
-        return deadRidges.Any(x => x == new Ridge(face.Start, face.vertex, this)) //Contains not using Equals override
-            || deadRidges.Any(x => x == new Ridge(face.End, face.vertex, this)); //Contains not using Equals override
+        return deadRidges.Contains(new Ridge(face.Start, face.vertex))
+            || deadRidges.Contains(new Ridge(face.End, face.vertex));
     }
 
     /// <summary>
@@ -315,8 +315,8 @@ public class CNetChunk : MonoBehaviour
     /// <returns>If one of the edge's are live</returns>
     bool LiveNeighborCheck(Edge edge)
     {
-        bool startRidge = liveRidges.Any(x => x == new Ridge(edge.Start, edge.vertex, edge.chunk)); //Contains not using Equals override
-        bool endRidge = liveRidges.Any(x => x == new Ridge(edge.End, edge.vertex, edge.chunk)); //Contains not using Equals override
+        bool startRidge = liveRidges.Contains(new Ridge(edge.Start, edge.vertex));
+        bool endRidge = liveRidges.Contains(new Ridge(edge.End, edge.vertex));
         return startRidge || endRidge;
     }
 
@@ -327,7 +327,7 @@ public class CNetChunk : MonoBehaviour
     /// <returns>If ridge is alive</returns>
     public bool LiveNeighborCheck(Ridge ridge)
     {
-        return liveRidges.Any(x => x == ridge); //Contains not using Equals override
+        return liveRidges.Contains(ridge);
     }
     #endregion
 

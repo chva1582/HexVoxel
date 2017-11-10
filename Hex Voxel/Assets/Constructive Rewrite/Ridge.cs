@@ -1,19 +1,16 @@
-﻿//Edge type for representing the edge of a face
-using System.Collections.Generic;
+﻿//Single segment
+using System;
 using UnityEngine;
-using System.Linq;
 
 public enum RidgeType { Flat, Long, Right, Mace };
 
-public struct Ridge
+public struct Ridge : IEquatable<Ridge>
 {
-    #region Variables & Properties
     //End Point should be clockwise from the Start Point relative to 
     //the center of the face the edge is a part of.
     public HexCell start, end;
-
-    public CNetChunk chunk;
-
+    
+    #region Properties
     //Type of Edge either Flat, Right, or Long
     public RidgeType Type
     {
@@ -77,7 +74,7 @@ public struct Ridge
     {
         get
         {
-            return new Ridge(end, start, chunk);
+            return new Ridge(end, start);
         }
     }
     #endregion
@@ -88,136 +85,54 @@ public struct Ridge
     /// </summary>
     /// <param name="startPoint">CC side point</param>
     /// <param name="endPoint">CW side point</param>
-    /// <param name="cNetChunk">Parent Chunk</param>
-    public Ridge(HexCell startPoint, HexCell endPoint, CNetChunk cNetChunk)
+    public Ridge(HexCell startPoint, HexCell endPoint)
     {
         start = startPoint;
         end = endPoint;
-        chunk = cNetChunk;
-        
-        
     }
     #endregion
 
-    #region Overrides
+    #region Equals
+    public bool Equals(Ridge obj)
+    {
+        bool forward = (start == obj.start && end == obj.end);
+        bool backward = (start == obj.end && end == obj.start);
+        return forward || backward;
+    }
+
     public override bool Equals(object obj)
     {
-        return (start == ((Ridge)obj).start && end == ((Ridge)obj).end) || (start == ((Ridge)obj).end && end == ((Ridge)obj).start);
-        //if (GetHashCode() == obj.GetHashCode())
-        //    return true;
-        //return false;
+        bool forward = (start == ((Ridge)obj).start && end == ((Ridge)obj).end);
+        bool backward = (start == ((Ridge)obj).end && end == ((Ridge)obj).start);
+        return forward || backward;
     }
 
     public override int GetHashCode()
     {
+        int startHash = start.GetHashCode();
+        int endHash = end.GetHashCode();
+        if (startHash > endHash)
+        {
+            startHash = endHash;
+            endHash = start.GetHashCode();
+        }
         unchecked
         {
             int hash = 47;
-            hash = hash * 227 + start.GetHashCode();
-            hash = hash * 227 + end.GetHashCode();
+            hash = hash * 227 + startHash;
+            hash = hash * 227 + endHash;
             return hash;
         }
     }
 
     public static bool operator ==(Ridge left, Ridge right)
     {
-        return left.Equals(right);
+        return right.Equals(left);
     }
 
     public static bool operator !=(Ridge left, Ridge right)
     {
-        return !left.Equals(right);
+        return !right.Equals(left);
     }
-    #endregion
-
-    #region Obsolete
-    /*
-    /// <summary>
-    /// Constructor for Edge
-    /// </summary>
-    /// <param name="startPoint">CC side point</param>
-    /// <param name="endPoint">CW side point</param>
-    /// <param name="center">Center of the face</param>
-    /// <param name="edgeType">Type of Edge to be created</param>
-    public Edge(HexCell startPoint, HexCell endPoint, HexCell originPoint, EdgeType edgeType)
-    {
-        start = startPoint;
-        end = endPoint;
-        origin = originPoint;
-        this.edgeType = edgeType;
-    }
-
-    ///// <summary>
-    ///// Derive Edge Type from points
-    ///// </summary>
-    ///// <param name="startPoint">CC side point</param>
-    ///// <param name="endPoint">CW side point</param>
-    ///// <returns>Type of Edge created</returns>
-    //EdgeType GetEdgeType(HexWorldCell startPoint, HexWorldCell endPoint)
-    //{
-    //    float distance = Vector3.SqrMagnitude((startPoint - endPoint).ToHexWorldCoord().ToVector3());
-    //    if (distance > 1.1f)
-    //        return EdgeType.Long;
-    //    if ((startPoint - endPoint).y > 0.1f)
-    //        return EdgeType.Right;
-    //    return EdgeType.Flat;
-    //}
-
-    ///// <summary>
-    ///// Rotates a point 60 degrees clockwise around its face's center
-    ///// </summary>
-    ///// <param name="i">Vector to be rotated</param>
-    ///// <returns>Rotated Vector</returns>
-    //public HexCell RotateCW60(HexCell i)
-    //{
-    //    HexCell o = new HexCell();
-    //    o.x = i.z;
-    //    o.y = i.y;
-    //    o.z = (sbyte)(i.z - i.x);
-    //    return o;
-    //}
-
-    ///// <summary>
-    ///// Rotates a point 60 degrees counterclockwise around its face's center
-    ///// </summary>
-    ///// <param name="i">Vector to be rotated</param>
-    ///// <returns>Rotated Vector</returns>
-    //public HexCell RotateCC60(HexCell i)
-    //{
-    //    HexCell o = new HexCell();
-    //    o.x = (sbyte)(i.x - i.z);
-    //    o.y = i.y;
-    //    o.z = i.x;
-    //    return o;
-    //}
-
-    ///// <summary>
-    ///// Rotates a point 120 degrees clockwise around its face's center
-    ///// </summary>
-    ///// <param name="i">Vector to be rotated</param>
-    ///// <returns>Rotated Vector</returns>
-    //public HexCell RotateCW120(HexCell i)
-    //{
-    //    HexCell o = new HexCell();
-    //    o.x = (sbyte)(i.z - i.x);
-    //    o.y = i.y;
-    //    o.z = (sbyte)(-i.x);
-    //    return o;
-    //}
-
-    ///// <summary>
-    ///// Rotates a point 120 degrees counterclockwise around its face's center
-    ///// </summary>
-    ///// <param name="i">Vector to be rotated</param>
-    ///// <returns>Rotated Vector</returns>
-    //public HexCell RotateCC120(HexCell i)
-    //{
-    //    HexCell o = new HexCell();
-    //    o.x = (sbyte)(-i.z);
-    //    o.y = i.y;
-    //    o.z = (sbyte)(i.x - i.z);
-    //    return o;
-    //}
-    */
     #endregion
 }
