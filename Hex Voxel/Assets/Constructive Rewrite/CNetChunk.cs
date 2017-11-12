@@ -16,7 +16,9 @@ public class CNetChunk : MonoBehaviour
 
     public Queue<Edge> facesToBuild = new Queue<Edge>();
     HashSet<Ridge> deadRidges = new HashSet<Ridge>();
-    HashSet<Ridge> liveRidges = new HashSet<Ridge>(); 
+    HashSet<Ridge> liveRidges = new HashSet<Ridge>();
+    Edge nextEdge;
+    bool needToFindNextEdge;
 
     public int[,,] RidgeInfos = new int[8, 8, 8];
 
@@ -29,6 +31,41 @@ public class CNetChunk : MonoBehaviour
     List<Vector3> verts = new List<Vector3>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
+
+    public Edge NextEdge
+    {
+        get
+        {
+            if(needToFindNextEdge)
+            {
+                do
+                {
+                    nextEdge = facesToBuild.Dequeue();
+                } while (!liveRidges.Contains(nextEdge.ridge));
+                liveRidges.Remove(nextEdge.ridge);
+                needToFindNextEdge = false;
+            }
+            return nextEdge;
+        }
+    }
+
+    public Vector3 NextStartPos{ get{ return HexToPos(NextEdge.ridge.start); } }
+    public Vector3 NextEndPos{ get{ return HexToPos(NextEdge.ridge.end); } }
+    public Vector3 NextOldVertex{ get{ return HexToPos(NextEdge.vertex); } }
+
+    public List<HexCell> NextNeighbors
+    {
+        get
+        {
+            return NextEdge.FindNeighborPoints();
+            //List<Vector3> posNeighbors = new List<Vector3>();
+            //for (int i = 0; i < hexNeighbors.Count; i++)
+            //{
+            //    posNeighbors.Add(HexToPos(hexNeighbors[i]));
+            //}
+            //return posNeighbors;
+        }
+    }
 
     bool shift;
     bool ctrl;
@@ -70,26 +107,24 @@ public class CNetChunk : MonoBehaviour
     #region Build
     public void ConstructFromNextEdge()
     {
-        Edge nextEdge = GetNextEdge();
-        List<HexCell> neighborPoints = nextEdge.FindNeighborPoints();
-        neighborPoints = OrganizeNeighbors(neighborPoints, nextEdge.ridge);
+        List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
+        neighborPoints = OrganizeNeighbors(neighborPoints, NextEdge.ridge);
 
         if (ctrl)
         {
-            print("For Edge " + nextEdge.Start + " - " + nextEdge.End);
+            print("For Edge " + NextEdge.Start + " - " + NextEdge.End);
             foreach (HexCell point in neighborPoints)
                 print(point + ": " + GetNoise(point.ToHexCoord()));
         }
 
         int neighborIndex = 0;
-        while (!LegalFace(new Edge(nextEdge.ridge, neighborPoints[neighborIndex]), nextEdge.vertex))
+        while (!LegalFace(new Edge(NextEdge.ridge, neighborPoints[neighborIndex]), NextEdge.vertex))
             neighborIndex++; 
 
         //HexCell nextVert = neighborPoints.Aggregate(
         //    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
 
-        BuildTriangle(new Edge(nextEdge.End, nextEdge.Start, neighborPoints[neighborIndex]));
-        //print(deadRidges.Count);
+        BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
     }
 
     public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
@@ -101,6 +136,8 @@ public class CNetChunk : MonoBehaviour
 
     public void BuildTriangle(HexCell start, HexCell end, HexCell origin, bool freeFloating = false)
     {
+        needToFindNextEdge = true;
+
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
 
@@ -111,8 +148,8 @@ public class CNetChunk : MonoBehaviour
             normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
-        if(facesToBuild.Count != 0 && net.showNextEdge)
-            DrawRidge(facesToBuild.Peek().ridge);
+        //if(facesToBuild.Count != 0 && net.showNextEdge)
+        //    DrawRidge(facesToBuild.Peek().ridge);
 
         EdgeToBuild(new Edge(end, origin, start));
         EdgeToBuild(new Edge(origin, start, end));
@@ -128,6 +165,8 @@ public class CNetChunk : MonoBehaviour
 
     public void BuildTriangle(Edge edge, bool freeFloating = false)
     {
+        needToFindNextEdge = true;
+
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
 
@@ -138,8 +177,8 @@ public class CNetChunk : MonoBehaviour
             normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
-        if (facesToBuild.Count != 0 && net.showNextEdge)
-            DrawRidge(facesToBuild.Peek().ridge);
+        //if (facesToBuild.Count != 0 && net.showNextEdge)
+        //    DrawRidge(facesToBuild.Peek().ridge);
 
         EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start));
         EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
@@ -171,17 +210,6 @@ public class CNetChunk : MonoBehaviour
             deadRidges.Add(edge.ridge);
             //print("Added Dead Edge: Start " + edge.ridge.start + ", End " + edge.ridge.end);
         }
-    }
-
-    Edge GetNextEdge()
-    {
-        Edge edge;
-        do
-        {
-            edge = facesToBuild.Dequeue();
-        } while (!liveRidges.Contains(edge.ridge));
-        liveRidges.Remove(edge.ridge);
-        return edge;
     }
 
     List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, bool fudgeFactor = true)
@@ -254,6 +282,21 @@ public class CNetChunk : MonoBehaviour
             if (ctrl) { print("Concave Fold"); }
         }
         return true;
+    }
+
+    public Color LegalStatus(Edge face, HexCell oldVert)
+    {
+        Color color = new Color(0, 0, 0);
+        if (DeadNeighbor(face))
+            color += new Color(0, 1, 0);
+        if (IsoplanarFaces(face, oldVert))
+            color += new Color(0, 0, 1);
+        if(FoldBack(face, oldVert))
+        {
+            if (AntiNormal(face))
+                color += new Color(1, 0, 0);
+        }
+        return color;
     }
 
     /// <summary>
@@ -332,7 +375,7 @@ public class CNetChunk : MonoBehaviour
     #endregion
 
     #region Noise Values
-    float GetNoise(HexCoord coord)
+    public float GetNoise(HexCoord coord)
     {
         //HexCell cell = coord.ToHexCell();
         try
@@ -342,7 +385,7 @@ public class CNetChunk : MonoBehaviour
         catch { return net.world.GetNoise(HexToWorldHex(coord)); }
     }
 
-    Vector3 GetNormal(HexCoord coord)
+    public Vector3 GetNormal(HexCoord coord)
     {
         //HexCell cell = coord.ToHexCell();
         try
@@ -350,13 +393,6 @@ public class CNetChunk : MonoBehaviour
             return net.world.GetNormal(HexToWorldHex(coord));// + editedNormals[cell.x, cell.y, cell.z];
         }
         catch { return net.world.GetNormal(HexToWorldHex(coord)); }
-    }
-    #endregion
-
-    #region Debug
-    void DrawRidge(Ridge ridge)
-    {
-        CNetDebug.DrawRidge(HexToPos(ridge.start), HexToPos(ridge.end), Color.red);
     }
     #endregion
 

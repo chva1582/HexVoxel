@@ -130,8 +130,8 @@ public class World : MonoBehaviour
             debugMode = debugMode != DebugMode.Octahedron ? DebugMode.Octahedron : DebugMode.None;
         if ((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && Input.GetKeyDown(KeyCode.G))
             debugMode = debugMode != DebugMode.Gradient ? DebugMode.Gradient : DebugMode.None;
-        if(Input.GetKeyDown(KeyCode.Return))
-            CreateChunk(new ChunkCoord(2, 0, -1));
+        //if(Input.GetKeyDown(KeyCode.Return))
+        //    CreateChunk(new ChunkCoord(2, 0, -1));
     }
     #endregion
 
