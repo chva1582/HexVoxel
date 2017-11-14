@@ -9,6 +9,7 @@ public class ConstructiveNet : MonoBehaviour
 
     public bool autoGrow;
     public bool showNextEdge;
+    public bool smoothMesh;
 
     HexCell initPoint1 = new HexCell(2, 1, 4);
     HexCell initPoint2 = new HexCell(2, 1, 5);

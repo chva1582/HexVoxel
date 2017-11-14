@@ -152,9 +152,12 @@ public class CNetChunk : MonoBehaviour
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
 
+        HexCell[] hexVertices = new HexCell[3] { start, end, origin };
+
         for (int i = 0; i < 3; i++)
         {
-            verts.Add(posVertices[i]);
+            if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
+            else { verts.Add(posVertices[i]); }
             tris.Add(tris.Count);
             //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
@@ -168,6 +171,7 @@ public class CNetChunk : MonoBehaviour
         if(!freeFloating)
             deadRidges.Add(new Ridge(start, end));
 
+        print(mesh.vertexCount + ", " + mesh.triangles.Count());
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();
@@ -182,10 +186,12 @@ public class CNetChunk : MonoBehaviour
         Vector3[] posVertices = new Vector3[3]
             {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
 
+        HexCell[] hexVertices = new HexCell[3] { edge.Start, edge.End, edge.vertex };
+
         for (int i = 0; i < 3; i++)
         {
-
-            verts.Add(posVertices[i]);
+            if(net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
+            else { verts.Add(posVertices[i]); }
             tris.Add(tris.Count);
             //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
@@ -198,7 +204,7 @@ public class CNetChunk : MonoBehaviour
 
         if(!freeFloating)
         deadRidges.Add(edge.ridge);
-
+        
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();
