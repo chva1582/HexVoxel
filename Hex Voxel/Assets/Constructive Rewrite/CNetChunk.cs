@@ -49,33 +49,38 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
+    public List<HexCell> NextNeighbors { get { return NextEdge.FindNeighborPoints(); } }
     public Vector3 NextStartPos{ get{ return HexToPos(NextEdge.ridge.start); } }
     public Vector3 NextEndPos{ get{ return HexToPos(NextEdge.ridge.end); } }
     public Vector3 NextOldVertex{ get{ return HexToPos(NextEdge.vertex); } }
 
-    public List<HexCell> NextNeighbors
+    HexCell forcedNextNeighbor = new HexCell();
+    bool shouldForceNextNeighbor = false;
+    public HexCell ForcedNextNeighbor
     {
         get
         {
-            return NextEdge.FindNeighborPoints();
-            //List<Vector3> posNeighbors = new List<Vector3>();
-            //for (int i = 0; i < hexNeighbors.Count; i++)
-            //{
-            //    posNeighbors.Add(HexToPos(hexNeighbors[i]));
-            //}
-            //return posNeighbors;
+            shouldForceNextNeighbor = false;
+            return forcedNextNeighbor;
+        }
+        set
+        {
+            shouldForceNextNeighbor = true;
+            forcedNextNeighbor = value;
+            ConstructFromForcedNeighbor();
         }
     }
 
-    bool shift;
+    bool leftShift;
+    bool rightShift;
     bool ctrl;
-
     #endregion
 
     #region Start & Update
     void Awake()
     {
         filter = GetComponent<MeshFilter>();
+        coll = GetComponent<MeshCollider>();
         mesh = new Mesh();
         mesh.Clear();
     }
@@ -84,11 +89,12 @@ public class CNetChunk : MonoBehaviour
     {
         if ((Input.GetKeyUp(KeyCode.Return) || net.autoGrow) && facesToBuild.Count != 0)
         {
-            for (int i = 0; i < (shift ? 10 : 1); i++)
+            for (int i = 0; i < (rightShift ? 100 : (leftShift ? 10 : 1)); i++)
                 ConstructFromNextEdge();
         }
 
-        shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        leftShift = Input.GetKey(KeyCode.LeftShift);
+        rightShift = Input.GetKey(KeyCode.RightShift);
         ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
     }
 
@@ -127,6 +133,11 @@ public class CNetChunk : MonoBehaviour
         BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
     }
 
+    void ConstructFromForcedNeighbor()
+    {
+        BuildTriangle(new Edge(NextEdge.End, nextEdge.Start, ForcedNextNeighbor));
+    }
+
     public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
     {
         Edge edge = new Edge(start, end, origin);
@@ -145,7 +156,7 @@ public class CNetChunk : MonoBehaviour
         {
             verts.Add(posVertices[i]);
             tris.Add(tris.Count);
-            normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
         //if(facesToBuild.Count != 0 && net.showNextEdge)
@@ -161,6 +172,7 @@ public class CNetChunk : MonoBehaviour
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();
         filter.mesh = mesh;
+        coll.sharedMesh = mesh;
     }
 
     public void BuildTriangle(Edge edge, bool freeFloating = false)
@@ -172,9 +184,10 @@ public class CNetChunk : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
         {
+
             verts.Add(posVertices[i]);
             tris.Add(tris.Count);
-            normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
         //if (facesToBuild.Count != 0 && net.showNextEdge)
@@ -190,6 +203,7 @@ public class CNetChunk : MonoBehaviour
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();
         filter.mesh = mesh;
+        coll.sharedMesh = mesh;
     }
     #endregion
 
@@ -212,7 +226,7 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, bool fudgeFactor = true)
+    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, bool fudgeFactor = false)
     {
         neighborPoints = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor.ToHexCoord()))).ToList();
         if (fudgeFactor)
@@ -250,6 +264,14 @@ public class CNetChunk : MonoBehaviour
             }
         }
         return neighborPoints;
+    }
+
+    Vector3 GetSmoothFactor(HexCell hex)
+    {
+        Vector3 norm = GetNormal(hex).normalized * Mathf.Sqrt(3) / 2;
+        float A = GetNoise(hex.ToHexCoord() + World.PosToHex(norm).ToHexCoord());
+        float B = GetNoise(hex.ToHexCoord() - World.PosToHex(norm).ToHexCoord());
+        return -norm * (A + B) / (A - B);
     }
 
     #region Checks
@@ -385,9 +407,29 @@ public class CNetChunk : MonoBehaviour
         catch { return net.world.GetNoise(HexToWorldHex(coord)); }
     }
 
+    public float GetNoise(HexCell cell)
+    {
+        HexCoord coord = cell.ToHexCoord();
+        try
+        {
+            return net.world.GetNoise(HexToWorldHex(coord));// + editedValues[cell.x, cell.y, cell.z];
+        }
+        catch { return net.world.GetNoise(HexToWorldHex(coord)); }
+    }
+
     public Vector3 GetNormal(HexCoord coord)
     {
         //HexCell cell = coord.ToHexCell();
+        try
+        {
+            return net.world.GetNormal(HexToWorldHex(coord));// + editedNormals[cell.x, cell.y, cell.z];
+        }
+        catch { return net.world.GetNormal(HexToWorldHex(coord)); }
+    }
+
+    public Vector3 GetNormal(HexCell cell)
+    {
+        HexCoord coord = cell.ToHexCoord();
         try
         {
             return net.world.GetNormal(HexToWorldHex(coord));// + editedNormals[cell.x, cell.y, cell.z];
