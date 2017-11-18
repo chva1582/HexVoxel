@@ -203,7 +203,7 @@ public class CNetChunk : MonoBehaviour
         EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
 
         if(!freeFloating)
-        deadRidges.Add(edge.ridge);
+            deadRidges.Add(edge.ridge);
         
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
