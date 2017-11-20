@@ -12,7 +12,6 @@ public struct Peak : IEquatable<Peak>
         point = p;
     }
 
-
     #region Equals
     public bool Equals(Peak obj)
     {

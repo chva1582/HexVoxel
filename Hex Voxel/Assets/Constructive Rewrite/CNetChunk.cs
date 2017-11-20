@@ -28,7 +28,7 @@ public class CNetChunk : MonoBehaviour
     MeshCollider coll;
     Mesh mesh;
 
-    List<Vector3> verts = new List<Vector3>();
+    public List<Vector3> verts = new List<Vector3>();
     List<int> tris = new List<int>();
     List<Vector3> normals = new List<Vector3>();
 
@@ -258,8 +258,7 @@ public class CNetChunk : MonoBehaviour
             {
                 if (LiveNeighborCheck(new Edge(ridge, neighborPoints[0])))
                 {
-                    List<HexCell> minimumPoint = new List<HexCell>();
-                    minimumPoint.Add(neighborPoints[0]);
+                    List<HexCell> minimumPoint = new List<HexCell> { neighborPoints[0] };
                     neighborPoints.Remove(neighborPoints[0]);
                     neighborPoints = minimumPoint.Concat(similarWithLiveEdge).Concat(neighborPoints).ToList();
                 }
