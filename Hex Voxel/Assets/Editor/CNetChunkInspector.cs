@@ -10,13 +10,13 @@ public class CNetChunkInspector : Editor
     CNetChunk chunk;
 
     bool nextEdgeButton = false;
-    bool redrawGizmos = false;
 
     Facet inspectedFacet;
     Ridge inspectedRidge;
     Peak inspectedPeak;
     Vector3 cursor;
     DebugMode mode;
+
     bool showNormals;
     bool showLocations = true;
     bool showValues;

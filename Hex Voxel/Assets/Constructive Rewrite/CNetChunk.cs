@@ -114,20 +114,36 @@ public class CNetChunk : MonoBehaviour
     public void ConstructFromNextEdge()
     {
         List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
-        neighborPoints = OrganizeNeighbors(neighborPoints, NextEdge.ridge, NextEdge.vertex);
+        IEnumerable<HexCell> points = OrganizeNeighbors(neighborPoints, NextEdge.ridge, NextEdge.vertex);
 
         if (ctrl)
         {
             print("For Edge " + NextEdge.Start + " - " + NextEdge.End);
-            foreach (HexCell point in neighborPoints)
+            foreach (HexCell point in points)
                 print(point + ": " + GetNoise(point.ToHexCoord()));
         }
 
-        int neighborIndex = 0;
-        while (!LegalFace(new Edge(NextEdge.ridge, neighborPoints[neighborIndex]), NextEdge.vertex))
-            neighborIndex++;
+        try
+        {
+            int neighborIndex = 0;
+            foreach (HexCell point in points)
+            {
+                if(LegalFace(new Edge(NextEdge.ridge, point), NextEdge.vertex))
+                {
+                    BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, point));
+                    break;
+                }
+            }
+            //while (!LegalFace(new Edge(NextEdge.ridge, points[neighborIndex]), NextEdge.vertex))
+            //    neighborIndex++;
 
-        BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
+            //BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
+        }
+        catch
+        {
+            if(net.continueOnProblem)
+                needToFindNextEdge = true;
+        }
     }
 
     void ConstructFromForcedNeighbor()
@@ -223,10 +239,10 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, HexCell oldVert)
+    IEnumerable<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, HexCell oldVert)
     {
-        neighborPoints = neighborPoints.OrderBy(neighbor => GetAdjustedNoise(neighbor, ridge, oldVert)).ToList();
-        return neighborPoints;
+        IEnumerable<HexCell> points = neighborPoints.OrderBy(neighbor => GetAdjustedNoise(neighbor, ridge, oldVert));
+        return points;
     }
 
     float GetAdjustedNoise(HexCell point, Ridge ridge, HexCell oldVert)
