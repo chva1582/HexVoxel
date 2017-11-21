@@ -2,7 +2,7 @@
 using System;
 using UnityEngine;
 
-public enum RidgeType { Flat, Long, Right, Mace };
+public enum RidgeType { Flat, Right, Long };
 
 public struct Ridge : IEquatable<Ridge>
 {
@@ -11,6 +11,14 @@ public struct Ridge : IEquatable<Ridge>
     public HexCell start, end;
     
     #region Properties
+    public int Identifier
+    {
+        get
+        {
+            return Direction * 3 + (int)Type;
+        }
+    }
+
     //Type of Edge either Flat, Right, or Long
     public RidgeType Type
     {
@@ -91,6 +99,16 @@ public struct Ridge : IEquatable<Ridge>
         end = endPoint;
     }
     #endregion
+
+    #region Functions
+    public Ridge OffsetRidge(HexCell offset)
+    {
+        Ridge o = this;
+        o.start += offset;
+        o.end += offset;
+        return o;
+    }
+#endregion
 
     #region Equals
     public bool Equals(Ridge obj)

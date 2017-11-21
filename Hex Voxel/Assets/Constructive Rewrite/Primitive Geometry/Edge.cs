@@ -20,6 +20,17 @@ public struct Edge : IEquatable<Edge>
             return new Vector3(ridgeDir.z, 0, -1 * ridgeDir.x);
         }
     }
+
+    public Vector3 GeometricNormal
+    {
+        get
+        {
+            Vector3 sReal = World.HexToPos(Start.ToHexCoord());
+            Vector3 eReal = World.HexToPos(End.ToHexCoord());
+            Vector3 vReal = World.HexToPos(vertex.ToHexCoord());
+            return Vector3.Cross(vReal - sReal, eReal - sReal);
+        }
+    }
     #endregion
 
     #region PreCalculated Values
@@ -68,6 +79,28 @@ public struct Edge : IEquatable<Edge>
         new List<HexCell>(){p2l,p4l,p3lf,p0l},
         new List<HexCell>(){p3h,p5h,p4hf,p1h},
         new List<HexCell>(){p4l,p0l,p5lf,p2l}
+    };
+
+    public static List<Ridge>[] opposingRidges = new List<Ridge>[18]
+    {
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p5h, p1), new Ridge(p1h, p0)},
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p0l, p2), new Ridge(p2l, p1)},
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p1h, p3), new Ridge(p3h, p2)},
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p2l, p4), new Ridge(p4l, p3)},
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p3h, p5), new Ridge(p5h, p4)},
+        new List<Ridge>(){},
+        new List<Ridge>(){},
+        new List<Ridge>(){new Ridge(p4l, p0), new Ridge(p0l, p5)}
     };
     #endregion
 

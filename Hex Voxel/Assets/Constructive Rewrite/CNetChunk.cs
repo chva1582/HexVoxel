@@ -114,7 +114,7 @@ public class CNetChunk : MonoBehaviour
     public void ConstructFromNextEdge()
     {
         List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
-        neighborPoints = OrganizeNeighbors(neighborPoints, NextEdge.ridge);
+        neighborPoints = OrganizeNeighbors(neighborPoints, NextEdge.ridge, NextEdge.vertex);
 
         if (ctrl)
         {
@@ -125,10 +125,7 @@ public class CNetChunk : MonoBehaviour
 
         int neighborIndex = 0;
         while (!LegalFace(new Edge(NextEdge.ridge, neighborPoints[neighborIndex]), NextEdge.vertex))
-            neighborIndex++; 
-
-        //HexCell nextVert = neighborPoints.Aggregate(
-        //    (prev, next) => Mathf.Abs(GetNoise(next.ToHexCoord())) < Mathf.Abs(GetNoise(prev.ToHexCoord())) ? next : prev);
+            neighborIndex++;
 
         BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
     }
@@ -162,9 +159,6 @@ public class CNetChunk : MonoBehaviour
             //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
-        //if(facesToBuild.Count != 0 && net.showNextEdge)
-        //    DrawRidge(facesToBuild.Peek().ridge);
-
         EdgeToBuild(new Edge(end, origin, start));
         EdgeToBuild(new Edge(origin, start, end));
 
@@ -196,9 +190,6 @@ public class CNetChunk : MonoBehaviour
             //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
         }
 
-        //if (facesToBuild.Count != 0 && net.showNextEdge)
-        //    DrawRidge(facesToBuild.Peek().ridge);
-
         EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start));
         EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
 
@@ -215,7 +206,7 @@ public class CNetChunk : MonoBehaviour
 
     void EdgeToBuild(Edge edge)
     {
-        if (!LiveNeighborCheck(edge.ridge))
+        if (!LiveNeighbor(edge.ridge))
         {
             facesToBuild.Enqueue(edge);
             liveRidges.Add(edge.ridge);
@@ -232,43 +223,19 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, bool fudgeFactor = false)
+    List<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, HexCell oldVert)
     {
-        neighborPoints = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor.ToHexCoord()))).ToList();
-        if (fudgeFactor)
-        {
-            float minimum = Mathf.Abs(GetNoise(neighborPoints[0].ToHexCoord()));
-            List<HexCell> similarWithLiveEdge = new List<HexCell>();
-            bool triggered = false;
-            for (int i = 1; i < neighborPoints.Count; i++)
-            {
-                if (Mathf.Abs(GetNoise(neighborPoints[i].ToHexCoord())) - minimum < 0.1)
-                {
-                    if (LiveNeighborCheck(new Edge(ridge, neighborPoints[i])))
-                    {
-                        similarWithLiveEdge.Add(neighborPoints[i]);
-                        neighborPoints.Remove(neighborPoints[i]);
-                    }
-                    triggered = true;
-                }
-                else
-                    break;
-            }
-            if (triggered)
-            {
-                if (LiveNeighborCheck(new Edge(ridge, neighborPoints[0])))
-                {
-                    List<HexCell> minimumPoint = new List<HexCell> { neighborPoints[0] };
-                    neighborPoints.Remove(neighborPoints[0]);
-                    neighborPoints = minimumPoint.Concat(similarWithLiveEdge).Concat(neighborPoints).ToList();
-                }
-                else
-                {
-                    neighborPoints = similarWithLiveEdge.Concat(neighborPoints).ToList();
-                }
-            }
-        }
+        neighborPoints = neighborPoints.OrderBy(neighbor => GetAdjustedNoise(neighbor, ridge, oldVert)).ToList();
         return neighborPoints;
+    }
+
+    float GetAdjustedNoise(HexCell point, Ridge ridge, HexCell oldVert)
+    {
+        float noise = Mathf.Abs(GetNoise(point.ToHexCoord()));
+        Vector3 oldNormal = (new Edge(ridge, oldVert)).GeometricNormal;
+        Vector3 newNormal = (new Edge(ridge.ReversedRidge, point)).GeometricNormal;
+        float angle = Mathf.Abs(Vector3.Angle(oldNormal, newNormal));
+        return noise + (angle / 90f) * 0.1f;
     }
 
     Vector3 GetSmoothFactor(HexCell hex)
@@ -293,11 +260,14 @@ public class CNetChunk : MonoBehaviour
             return false;
         }
 
-        if (IsoplanarFaces(face, oldVert))
+        if (Collision(face))
         {
-            if (ctrl) { print("Isoplanar"); }
+            if (ctrl) { print("Collision"); }
             return false;
         }
+
+        if (Covered(face))
+            return false;
 
         if (FoldBack(face, oldVert))
         {
@@ -316,66 +286,118 @@ public class CNetChunk : MonoBehaviour
         Color color = new Color(0, 0, 0);
         if (DeadNeighbor(face))
             color += new Color(0, 1, 0);
-        if (IsoplanarFaces(face, oldVert))
-            color += new Color(0, 0, 1);
+        if (Collision(face))
+            color += new Color(0, 0, 0.6f);
+        if (Covered(face))
+            color += new Color(0.4f, 0, 0.4f);
         if(FoldBack(face, oldVert))
         {
             if (AntiNormal(face))
-                color += new Color(1, 0, 0);
+                color += new Color(0.6f, 0, 0);
         }
         return color;
     }
 
     /// <summary>
-    /// Checks if a planned face will contact a pre-existing dead ridge
+    /// Checks if a planned face will overlay a pre-existing dead ridge
     /// Only non-ridge edges will be checked
     /// </summary>
-    /// <param name="face">Face to check</param>
+    /// <param name="edge">Face to check</param>
     /// <returns>If non-ridge segments are dead</returns>
-    bool DeadNeighbor(Edge face)
+    bool DeadNeighbor(Edge edge)
     {
         if (deadRidges.Count == 0)
             return false;
-        return deadRidges.Contains(new Ridge(face.Start, face.vertex))
-            || deadRidges.Contains(new Ridge(face.End, face.vertex));
+        return deadRidges.Contains(new Ridge(edge.Start, edge.vertex))
+            || deadRidges.Contains(new Ridge(edge.End, edge.vertex));
+    }
+
+    /// <summary>
+    /// Checks if a ridge will overlay a pre-existing dead ridge
+    /// </summary>
+    /// <param name="edge">Face to check</param>
+    /// <returns>If segment is dead</returns>
+    bool DeadNeighbor(Ridge ridge)
+    {
+        if (deadRidges.Count == 0)
+            return false;
+        return deadRidges.Contains(ridge);
     }
 
     /// <summary>
     /// Checks if the new face lies in the same plane as the old one
     /// Only returns true if the surface "folds" making a zero volume space
     /// </summary>
-    /// <param name="face">Face to Check</param>
+    /// <param name="edge">Face to Check</param>
     /// <param name="oldVert">Vertex of Previous Face</param>
     /// <returns>If the new face intersects the previous face</returns>
-    bool IsoplanarFaces(Edge face, HexCell oldVert)
+    bool IsoplanarFaces(Edge edge, HexCell oldVert)
     {
-        HexCell ridgeVector = face.Start - face.End;
-        HexCell verticesVector = face.vertex - oldVert;
+        HexCell ridgeVector = edge.Start - edge.End;
+        HexCell verticesVector = edge.vertex - oldVert;
         return ((ridgeVector == verticesVector) || (ridgeVector == -1 * verticesVector));
     }
 
     /// <summary>
     /// Checks if a new face folds back on itself trapping it to run parallel to the actual face
     /// </summary>
-    /// <param name="face">Face to Check</param>
+    /// <param name="edge">Face to Check</param>
     /// <param name="oldVert">Vertex of Previous Face</param>
     /// <returns>If the new face is a fold back</returns>
-    bool FoldBack(Edge face, HexCell oldVert)
+    bool FoldBack(Edge edge, HexCell oldVert)
     {
-        bool newPositive = 0 < Vector3.Dot(face.SeperationPlaneNormal, World.HexToPos((face.vertex - face.Start).ToHexCoord().ToHexWorldCoord()));
-        bool oldPositive = 0 < Vector3.Dot(face.SeperationPlaneNormal, World.HexToPos((oldVert - face.Start).ToHexCoord().ToHexWorldCoord()));
+        bool newPositive = 0 < Vector3.Dot(edge.SeperationPlaneNormal, World.HexToPos((edge.vertex - edge.Start).ToHexCoord().ToHexWorldCoord()));
+        bool oldPositive = 0 < Vector3.Dot(edge.SeperationPlaneNormal, World.HexToPos((oldVert - edge.Start).ToHexCoord().ToHexWorldCoord()));
         return newPositive == oldPositive;
     }
 
     /// <summary>
     /// Checks if a new face is facing in the opposite direction as the noise
     /// </summary>
-    /// <param name="face"></param>
+    /// <param name="edge"></param>
     /// <returns></returns>
-    bool AntiNormal(Edge face)
+    bool AntiNormal(Edge edge)
     {
-        Vector3 faceNormal = Vector3.Cross(World.HexToPos((face.vertex - face.Start).ToHexCoord().ToHexWorldCoord()), World.HexToPos((face.End - face.Start).ToHexCoord().ToHexWorldCoord()));
-        return Vector3.Angle(faceNormal, GetNormal(face.Start.ToHexCoord())) > 100;
+        return Vector3.Angle(edge.GeometricNormal, GetNormal(edge.Start.ToHexCoord())) > 100;
+    }
+
+    bool Collision(Edge edge)
+    {
+        //Check for Opposing Edges
+        List<Ridge> opposingRidges = Edge.opposingRidges[new Ridge(edge.Start, edge.vertex).Identifier];
+        for (int i = 0; i < opposingRidges.Count; i++)
+        {
+            if(ctrl)
+            {
+                print("First" + LiveNeighbor(opposingRidges[i].OffsetRidge(edge.Start)) + ", " + DeadNeighbor(opposingRidges[i].OffsetRidge(edge.Start)));
+            }
+            if (LiveNeighbor(opposingRidges[i].OffsetRidge(edge.Start)) || DeadNeighbor(opposingRidges[i].OffsetRidge(edge.Start)))
+                return true;
+        }
+        opposingRidges = Edge.opposingRidges[new Ridge(edge.End, edge.vertex).Identifier];
+        for (int i = 0; i < opposingRidges.Count; i++)
+        {
+            if (ctrl)
+            {
+                print("Second" + LiveNeighbor(opposingRidges[i].OffsetRidge(edge.End)) + ", " + DeadNeighbor(opposingRidges[i].OffsetRidge(edge.End)));
+            }
+            if (LiveNeighbor(opposingRidges[i].OffsetRidge(edge.End)) || DeadNeighbor(opposingRidges[i].OffsetRidge(edge.End)))
+                return true;
+        }
+        return false;
+    }
+
+    bool Covered(Edge edge)
+    {
+        Vector3 normal = GetNormal(edge.vertex).normalized;
+        Ray forwardRay = new Ray(HexToPos(edge.vertex) + normal * 0.5f, normal);
+        Ray backwardRay = new Ray(HexToPos(edge.vertex) - normal * 0.5f, -normal);
+        Ray forwardReverseRay = new Ray(HexToPos(edge.vertex) + normal * 2.5f, -normal);
+        Ray backwardReverseRay = new Ray(HexToPos(edge.vertex) - normal * 2.5f, normal);
+        Debug.DrawRay(forwardReverseRay.origin, 2 * forwardReverseRay.direction, Color.red);
+        Debug.DrawRay(backwardReverseRay.origin, 2 * backwardReverseRay.direction, Color.blue);
+        return (Physics.Raycast(forwardRay, 2) || Physics.Raycast(backwardRay, 2) || 
+            Physics.Raycast(forwardReverseRay, 2) || Physics.Raycast(backwardReverseRay, 2));
     }
 
     /// <summary>
@@ -383,7 +405,7 @@ public class CNetChunk : MonoBehaviour
     /// </summary>
     /// <param name="edge">Edge to check</param>
     /// <returns>If one of the edge's are live</returns>
-    bool LiveNeighborCheck(Edge edge)
+    bool LiveNeighbor(Edge edge)
     {
         bool startRidge = liveRidges.Contains(new Ridge(edge.Start, edge.vertex));
         bool endRidge = liveRidges.Contains(new Ridge(edge.End, edge.vertex));
@@ -395,7 +417,7 @@ public class CNetChunk : MonoBehaviour
     /// </summary>
     /// <param name="ridge">Ridge to check</param>
     /// <returns>If ridge is alive</returns>
-    public bool LiveNeighborCheck(Ridge ridge)
+    public bool LiveNeighbor(Ridge ridge)
     {
         return liveRidges.Contains(ridge);
     }
