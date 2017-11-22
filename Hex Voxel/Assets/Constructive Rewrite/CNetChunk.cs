@@ -125,21 +125,31 @@ public class CNetChunk : MonoBehaviour
 
         try
         {
-            int neighborIndex = 0;
-            foreach (HexCell point in points)
+            for (int i = 0; i < 8; i++)
             {
-                if(LegalFace(new Edge(NextEdge.ridge, point), NextEdge.vertex))
+                //HexCell point = neighborPoints.Aggregate((minimum, next) =>
+                //    Mathf.Abs(GetNoise(next)) < Mathf.Abs(GetNoise(minimum)) ? next : minimum);
+                HexCell point = neighborPoints[0];
+                float minimumNoise = Mathf.Abs(GetNoise(neighborPoints[0]));
+                for (int j = 1; j < neighborPoints.Count; j++)
+                {
+                    float nextNoise = Mathf.Abs(GetNoise(neighborPoints[j]));
+                    if (nextNoise < minimumNoise)
+                    {
+                        minimumNoise = nextNoise;
+                        point = neighborPoints[j];
+                    }
+                }
+                if (LegalFace(new Edge(NextEdge.ridge, point), NextEdge.vertex))
                 {
                     BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, point));
                     break;
                 }
+                else
+                    neighborPoints.Remove(point);
             }
-            //while (!LegalFace(new Edge(NextEdge.ridge, points[neighborIndex]), NextEdge.vertex))
-            //    neighborIndex++;
-
-            //BuildTriangle(new Edge(NextEdge.End, NextEdge.Start, neighborPoints[neighborIndex]));
         }
-        catch
+        finally
         {
             if(net.continueOnProblem)
                 needToFindNextEdge = true;
@@ -241,25 +251,9 @@ public class CNetChunk : MonoBehaviour
 
     IEnumerable<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, HexCell oldVert)
     {
-        IEnumerable<HexCell> points = neighborPoints.OrderBy(neighbor => GetAdjustedNoise(neighbor, ridge, oldVert));
+        //Aided Performance a lot to switch to just GetNoise however GetAdjustedNoise produces better meshes
+        IEnumerable<HexCell> points = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor)));
         return points;
-    }
-
-    float GetAdjustedNoise(HexCell point, Ridge ridge, HexCell oldVert)
-    {
-        float noise = Mathf.Abs(GetNoise(point.ToHexCoord()));
-        Vector3 oldNormal = (new Edge(ridge, oldVert)).GeometricNormal;
-        Vector3 newNormal = (new Edge(ridge.ReversedRidge, point)).GeometricNormal;
-        float angle = Mathf.Abs(Vector3.Angle(oldNormal, newNormal));
-        return noise + (angle / 90f) * 0.1f;
-    }
-
-    Vector3 GetSmoothFactor(HexCell hex)
-    {
-        Vector3 norm = GetNormal(hex).normalized * Mathf.Sqrt(3) / 2;
-        float A = GetNoise(hex.ToHexCoord() + World.PosToHex(norm).ToHexCoord());
-        float B = GetNoise(hex.ToHexCoord() - World.PosToHex(norm).ToHexCoord());
-        return -norm * (A + B) / (A - B);
     }
 
     #region Checks
@@ -478,6 +472,23 @@ public class CNetChunk : MonoBehaviour
             return net.world.GetNormal(HexToWorldHex(coord));// + editedNormals[cell.x, cell.y, cell.z];
         }
         catch { return net.world.GetNormal(HexToWorldHex(coord)); }
+    }
+
+    float GetAdjustedNoise(HexCell point, Ridge ridge, HexCell oldVert)
+    {
+        float noise = Mathf.Abs(GetNoise(point.ToHexCoord()));
+        Vector3 oldNormal = (new Edge(ridge, oldVert)).GeometricNormal;
+        Vector3 newNormal = (new Edge(ridge.ReversedRidge, point)).GeometricNormal;
+        float angle = Mathf.Abs(Vector3.Angle(oldNormal, newNormal));
+        return noise + (angle / 90f) * 0.1f;
+    }
+
+    Vector3 GetSmoothFactor(HexCell hex)
+    {
+        Vector3 norm = GetNormal(hex).normalized * Mathf.Sqrt(3) / 2;
+        float A = GetNoise(hex.ToHexCoord() + World.PosToHex(norm).ToHexCoord());
+        float B = GetNoise(hex.ToHexCoord() - World.PosToHex(norm).ToHexCoord());
+        return -norm * (A + B) / (A - B);
     }
     #endregion
 
