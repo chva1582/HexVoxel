@@ -111,7 +111,6 @@ public struct Ridge : IEquatable<Ridge>
     {
         List<HexCell> neighbors = new List<HexCell>();
         HexCell startPoint = start;
-        HexCell endPoint = end;
 
         if (Type == RidgeType.Flat)
             neighbors = Edge.flatRidgeNeighbors[Direction];

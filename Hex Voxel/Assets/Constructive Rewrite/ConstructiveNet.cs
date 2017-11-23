@@ -37,7 +37,7 @@ public class ConstructiveNet : MonoBehaviour
 
     CNetChunk InitializeChunk(ChunkCoord coords)
     {
-        CNetChunk chunk = Instantiate(ChunkObject, World.ChunkToPos(coords), Quaternion.Euler(Vector3.up)).GetComponent<CNetChunk>();
+        CNetChunk chunk = Instantiate(ChunkObject, World.ChunkToPos(coords), Quaternion.identity).GetComponent<CNetChunk>();
         chunk.transform.SetParent(transform);
         chunk.net = this;
         chunk.chunkCoords = coords;

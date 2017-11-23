@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -216,7 +217,6 @@ public class CNetChunk : MonoBehaviour
         if(!freeFloating)
             deadRidges.Add(new Ridge(start, end));
 
-        print(mesh.vertexCount + ", " + mesh.triangles.Count());
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();

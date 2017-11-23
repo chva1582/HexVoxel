@@ -60,7 +60,7 @@ public class CNetChunkInspector : Editor
             AllMesh();
 
         bool selectedMode = (mode == DebugMode.SelectedFace || mode == DebugMode.SelectedSegment || mode == DebugMode.SelectedPoint);
-        if (selectedMode && cursor != null)
+        if (selectedMode)
             Handles.SphereHandleCap(0, cursor, Quaternion.identity, 0.2f, EventType.Repaint);
 
         if (mode == DebugMode.SelectedFace)
