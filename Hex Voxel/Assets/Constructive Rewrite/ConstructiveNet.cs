@@ -5,6 +5,7 @@ public class ConstructiveNet : MonoBehaviour
 {
     public World world;
     public GameObject ChunkObject;
+    public GameObject initializationProbe;
     List<CNetChunk> chunks = new List<CNetChunk>();
 
     public bool autoGrow;
@@ -21,8 +22,10 @@ public class ConstructiveNet : MonoBehaviour
     {
         CNetChunk initialChunk = InitializeChunk(new ChunkCoord(-2,0,3));
         chunks.Add(initialChunk);
+        initializationProbe = GameObject.Find("Player");
 
-        initialChunk.BuildFirstTriangle(initPoint1, initPoint2, initPoint3);
+        Ridge initRidge = FindThresholdAlongRay(new Ray(initializationProbe.transform.position, Vector3.down), initialChunk);
+        initialChunk.ConstructFirstTriangle(initRidge);
     }
 	
 	// Update is called once per frame
@@ -41,6 +44,41 @@ public class ConstructiveNet : MonoBehaviour
         return chunk;
     }
 
+    Ridge FindThresholdAlongRay(Ray ray, CNetChunk chunk)
+    {
+        float value = 10;
+        float distance = 0;
+        int i;
+
+        for (int largeSteps = 1; largeSteps < 20; largeSteps++)
+        {
+            value = world.GetNoise(World.PosToHex(ray.origin + ray.direction * 10 * largeSteps));
+            if(value < 0)
+            {
+                distance = 10 * (largeSteps - 1);
+                break;
+            }
+            if (largeSteps == 19)
+                Debug.LogError("Initial Ray Search could not find ground");
+        }
+        for (i = 0; i < 10; i++)
+        {
+            value = world.GetNoise(World.PosToHex(ray.origin + ray.direction * (distance + i)));
+            if (value < 0)
+                break;
+        }
+        
+        HexCoord hitPoint = chunk.PosToHex(ray.origin + ray.direction * (distance + i));
+        Ridge ridge = new Ridge();
+        ridge.start.X = (sbyte)Mathf.FloorToInt(hitPoint.x);
+        ridge.start.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);
+        ridge.start.Z = (sbyte)Mathf.RoundToInt(hitPoint.z);
+        ridge.end.X = (sbyte)Mathf.CeilToInt(hitPoint.x);
+        ridge.end.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);
+        ridge.end.Z = (sbyte)Mathf.RoundToInt(hitPoint.z);
+        return ridge;
+    }
+
     //This along with the method call in update should go in World as soon as the old system is past its use and archived
     void Restart()
     {
@@ -50,6 +88,6 @@ public class ConstructiveNet : MonoBehaviour
 
         print("Restarted");
         chunks[0].Restart();
-        chunks[0].BuildFirstTriangle(initPoint1, initPoint2, initPoint3);
+        chunks[0].ConstructFirstTriangle(initPoint1, initPoint2, initPoint3);
     }
 }

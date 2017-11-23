@@ -114,7 +114,7 @@ public class CNetChunk : MonoBehaviour
     public void ConstructFromNextEdge()
     {
         List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
-        IEnumerable<HexCell> points = OrganizeNeighbors(neighborPoints, NextEdge.ridge, NextEdge.vertex);
+        IEnumerable<HexCell> points = OrganizeNeighbors(neighborPoints);
 
         if (ctrl)
         {
@@ -161,11 +161,36 @@ public class CNetChunk : MonoBehaviour
         BuildTriangle(new Edge(NextEdge.End, nextEdge.Start, ForcedNextNeighbor));
     }
 
-    public void BuildFirstTriangle(HexCell start, HexCell end, HexCell origin)
+    public void ConstructFirstTriangle(HexCell start, HexCell end, HexCell origin)
     {
         Edge edge = new Edge(start, end, origin);
         EdgeToBuild(edge);
         BuildTriangle(edge, true);
+    }
+
+    public void ConstructFirstTriangle(Ridge ridge)
+    {
+        List<HexCell> neighborPoints = ridge.FindNeighborPoints();
+        
+        HexCell point = neighborPoints[0];
+        for (int i = 0; i < 8; i++)
+        {
+            float minimumNoise = Mathf.Abs(GetNoise(neighborPoints[0]));
+            for (int j = 1; j < neighborPoints.Count; j++)
+            {
+                float nextNoise = Mathf.Abs(GetNoise(neighborPoints[j]));
+                if (nextNoise < minimumNoise)
+                {
+                    minimumNoise = nextNoise;
+                    point = neighborPoints[j];
+                }
+            }
+        }
+        Edge edge = new Edge(ridge, point);
+        if (Vector3.Angle(-edge.GeometricNormal, GetNormal(point.ToHexCoord())) > 90)
+            ridge = ridge.ReversedRidge;
+        EdgeToBuild(new Edge(ridge, point));
+        BuildTriangle(new Edge(ridge, point), true);
     }
 
     public void BuildTriangle(HexCell start, HexCell end, HexCell origin, bool freeFloating = false)
@@ -249,7 +274,7 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    IEnumerable<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints, Ridge ridge, HexCell oldVert)
+    IEnumerable<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints)
     {
         //Aided Performance a lot to switch to just GetNoise however GetAdjustedNoise produces better meshes
         IEnumerable<HexCell> points = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor)));

@@ -41,7 +41,7 @@ public struct Edge : IEquatable<Edge>
         p4 = new HexCell(-1, 0, -1), p4l = new HexCell(0, -1, 0), p4hf = new HexCell(-2, 1, -1), p4hd = new HexCell(-2, 2, -1),
         p5 = new HexCell(-1, 0, 0), p5h = new HexCell(-1, 1, 0), p5lf = new HexCell(0, -1, 1), p5ld = new HexCell(1, -2, 1);
 
-    static List<HexCell>[] flatRidgeNeighbors = new List<HexCell>[6]
+    public static List<HexCell>[] flatRidgeNeighbors = new List<HexCell>[6]
     {
         new List<HexCell>(){p1,p5,p0l,p5h,p0hf,p5lf,p1h,p4l},
         new List<HexCell>(){p2,p0,p1h,p0l,p1lf,p0hf,p2l,p5h},
@@ -51,7 +51,7 @@ public struct Edge : IEquatable<Edge>
         new List<HexCell>(){p0,p4,p5h,p4l,p5lf,p4hf,p0l,p3h}
     };
 
-    static List<HexCell>[] longRidgeNeighbors = new List<HexCell>[6]
+    public static List<HexCell>[] longRidgeNeighbors = new List<HexCell>[6]
     {
         new List<HexCell>(){p1,p0,p1h,p5h,},//p0l,p0hd},
         new List<HexCell>(){p2,p1,p2l,p0l,},//p1h,p1ld},
@@ -61,7 +61,7 @@ public struct Edge : IEquatable<Edge>
         new List<HexCell>(){p0,p5,p0l,p4l,},//p5h,p5ld}
     };
 
-    static List<HexCell>[] rightRidgeNeighbors = new List<HexCell>[6]
+    public static List<HexCell>[] rightRidgeNeighbors = new List<HexCell>[6]
     {
         new List<HexCell>(){p1,p0,p2,p5,p2l,p4l,p1lf,p5lf,},//p1h,p5h,p0hf,p3ld},
         new List<HexCell>(){p2,p1,p3,p0,p3h,p5h,p2hf,p0hf,},//p2l,p0l,p1lf,p4hd},
@@ -71,7 +71,7 @@ public struct Edge : IEquatable<Edge>
         new List<HexCell>(){p0,p5,p1,p4,p1h,p3h,p0hf,p4hf,},//p0l,p4l,p5lf,p2hd}
     };
 
-    static List<HexCell>[] maceRidgeNeighbors = new List<HexCell>[6]
+    public static List<HexCell>[] maceRidgeNeighbors = new List<HexCell>[6]
     {
         new List<HexCell>(){p5h,p1h,p0hf,p3h},
         new List<HexCell>(){p0l,p2l,p1lf,p4l},

@@ -1,5 +1,7 @@
 ﻿//Single segment
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public enum RidgeType { Flat, Right, Long };
@@ -101,6 +103,27 @@ public struct Ridge : IEquatable<Ridge>
     #endregion
 
     #region Functions
+    /// <summary>
+    /// Retrieve a list of possible neighbor vertices for this edge
+    /// </summary>
+    /// <returns>List of Neighbors</returns>
+    public List<HexCell> FindNeighborPoints()
+    {
+        List<HexCell> neighbors = new List<HexCell>();
+        HexCell startPoint = start;
+        HexCell endPoint = end;
+
+        if (Type == RidgeType.Flat)
+            neighbors = Edge.flatRidgeNeighbors[Direction];
+        else if (Type == RidgeType.Long)
+            neighbors = Edge.longRidgeNeighbors[Direction];
+        else
+            neighbors = Edge.rightRidgeNeighbors[Direction];
+
+        neighbors = neighbors.Select(x => x + startPoint).ToList();
+        return neighbors;
+    }
+
     public Ridge OffsetRidge(HexCell offset)
     {
         Ridge o = this;
