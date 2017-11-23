@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class ConstructiveNet : MonoBehaviour
 {
+    public static int chunkSize = 64;
+
     public World world;
     public GameObject ChunkObject;
     public GameObject initializationProbe;
@@ -20,11 +22,11 @@ public class ConstructiveNet : MonoBehaviour
     // Use this for initialization
     void Start ()
     {
-        CNetChunk initialChunk = InitializeChunk(new ChunkCoord(-2,0,3));
-        chunks.Add(initialChunk);
         initializationProbe = GameObject.Find("Player");
 
-        Ridge initRidge = FindThresholdAlongRay(new Ray(initializationProbe.transform.position, Vector3.down), initialChunk);
+        CNetChunk initialChunk;
+        Ridge initRidge = FindThresholdAlongRay(new Ray(initializationProbe.transform.position, Vector3.down), out initialChunk);
+        //print(initRidge.start);
         initialChunk.ConstructFirstTriangle(initRidge);
     }
 	
@@ -44,7 +46,7 @@ public class ConstructiveNet : MonoBehaviour
         return chunk;
     }
 
-    Ridge FindThresholdAlongRay(Ray ray, CNetChunk chunk)
+    Ridge FindThresholdAlongRay(Ray ray, out CNetChunk chunk)
     {
         float value = 10;
         float distance = 0;
@@ -67,8 +69,13 @@ public class ConstructiveNet : MonoBehaviour
             if (value < 0)
                 break;
         }
-        
+
+        print(World.PosToHex(ray.origin + ray.direction * (distance + i)));
+        print(CNetChunk.PosToChunk(ray.origin + ray.direction * (distance + i)));
+        chunk = InitializeChunk(CNetChunk.PosToChunk(ray.origin + ray.direction * (distance + i)));
+        chunks.Add(chunk);
         HexCoord hitPoint = chunk.PosToHex(ray.origin + ray.direction * (distance + i));
+        print(hitPoint);
         Ridge ridge = new Ridge();
         ridge.start.X = (sbyte)Mathf.FloorToInt(hitPoint.x);
         ridge.start.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);

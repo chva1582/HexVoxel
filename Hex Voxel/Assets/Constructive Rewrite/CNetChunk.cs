@@ -1,8 +1,6 @@
 ﻿//A group of points of square size organized in octahedral coordinates
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEditor;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -11,28 +9,39 @@ using UnityEditor;
 public class CNetChunk : MonoBehaviour
 {
     #region Variables
-    public ConstructiveNet net;
-
+    //Control Variables
+    int size;
     public ChunkCoord chunkCoords;
 
+    //Parents
+    public ConstructiveNet net;
+
+    //Components
+    MeshFilter filter;
+    MeshCollider coll;
+    Mesh mesh;
+
+    //Mesh Variables
+    public List<Vector3> verts = new List<Vector3>();
+    List<int> tris = new List<int>();
+    List<Vector3> normals = new List<Vector3>();
+
+    //Input Variables
+    bool leftShift;
+    bool rightShift;
+    bool ctrl;
+
+    //Net Storage Variables
     public Queue<Edge> facesToBuild = new Queue<Edge>();
     HashSet<Ridge> deadRidges = new HashSet<Ridge>();
     HashSet<Ridge> liveRidges = new HashSet<Ridge>();
     Edge nextEdge;
     bool needToFindNextEdge;
 
-    public int[,,] RidgeInfos = new int[8, 8, 8];
-
-    public HexWorldCoord HexOffset { get { return World.PosToHex(World.ChunkToPos(chunkCoords)); } }
-    public Vector3 PosOffset { get { return World.ChunkToPos(chunkCoords); } }
-    MeshFilter filter;
-    MeshCollider coll;
-    Mesh mesh;
-
-    public List<Vector3> verts = new List<Vector3>();
-    List<int> tris = new List<int>();
-    List<Vector3> normals = new List<Vector3>();
-
+    //Properties
+    public HexWorldCoord HexOffset { get { return World.PosToHex(ChunkToPos(chunkCoords)); } }
+    public Vector3 PosOffset { get { return ChunkToPos(chunkCoords); } }
+    
     public Edge NextEdge
     {
         get
@@ -49,7 +58,6 @@ public class CNetChunk : MonoBehaviour
             return nextEdge;
         }
     }
-
     public List<HexCell> NextNeighbors { get { return NextEdge.FindNeighborPoints(); } }
     public Vector3 NextStartPos{ get{ return HexToPos(NextEdge.ridge.start); } }
     public Vector3 NextEndPos{ get{ return HexToPos(NextEdge.ridge.end); } }
@@ -71,10 +79,6 @@ public class CNetChunk : MonoBehaviour
             ConstructFromForcedNeighbor();
         }
     }
-
-    bool leftShift;
-    bool rightShift;
-    bool ctrl;
     #endregion
 
     #region Start & Update
@@ -115,21 +119,11 @@ public class CNetChunk : MonoBehaviour
     public void ConstructFromNextEdge()
     {
         List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
-        IEnumerable<HexCell> points = OrganizeNeighbors(neighborPoints);
-
-        if (ctrl)
-        {
-            print("For Edge " + NextEdge.Start + " - " + NextEdge.End);
-            foreach (HexCell point in points)
-                print(point + ": " + GetNoise(point.ToHexCoord()));
-        }
 
         try
         {
             for (int i = 0; i < 8; i++)
             {
-                //HexCell point = neighborPoints.Aggregate((minimum, next) =>
-                //    Mathf.Abs(GetNoise(next)) < Mathf.Abs(GetNoise(minimum)) ? next : minimum);
                 HexCell point = neighborPoints[0];
                 float minimumNoise = Mathf.Abs(GetNoise(neighborPoints[0]));
                 for (int j = 1; j < neighborPoints.Count; j++)
@@ -174,17 +168,14 @@ public class CNetChunk : MonoBehaviour
         List<HexCell> neighborPoints = ridge.FindNeighborPoints();
         
         HexCell point = neighborPoints[0];
-        for (int i = 0; i < 8; i++)
+        float minimumNoise = Mathf.Abs(GetNoise(neighborPoints[0]));
+        for (int j = 1; j < neighborPoints.Count; j++)
         {
-            float minimumNoise = Mathf.Abs(GetNoise(neighborPoints[0]));
-            for (int j = 1; j < neighborPoints.Count; j++)
+            float nextNoise = Mathf.Abs(GetNoise(neighborPoints[j]));
+            if (nextNoise < minimumNoise)
             {
-                float nextNoise = Mathf.Abs(GetNoise(neighborPoints[j]));
-                if (nextNoise < minimumNoise)
-                {
-                    minimumNoise = nextNoise;
-                    point = neighborPoints[j];
-                }
+                minimumNoise = nextNoise;
+                point = neighborPoints[j];
             }
         }
         Edge edge = new Edge(ridge, point);
@@ -198,60 +189,66 @@ public class CNetChunk : MonoBehaviour
     {
         needToFindNextEdge = true;
 
-        Vector3[] posVertices = new Vector3[3]
-            {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
-
-        HexCell[] hexVertices = new HexCell[3] { start, end, origin };
-
-        for (int i = 0; i < 3; i++)
+        if (WithinChunk(origin))
         {
-            if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
-            else { verts.Add(posVertices[i]); }
-            tris.Add(tris.Count);
-            //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            Vector3[] posVertices = new Vector3[3]
+                {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
+
+            HexCell[] hexVertices = new HexCell[3] { start, end, origin };
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
+                else { verts.Add(posVertices[i]); }
+                tris.Add(tris.Count);
+                //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            }
+
+            EdgeToBuild(new Edge(end, origin, start));
+            EdgeToBuild(new Edge(origin, start, end));
+
+            if (!freeFloating)
+                deadRidges.Add(new Ridge(start, end));
+
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            filter.mesh = mesh;
+            coll.sharedMesh = mesh;
         }
-
-        EdgeToBuild(new Edge(end, origin, start));
-        EdgeToBuild(new Edge(origin, start, end));
-
-        if(!freeFloating)
-            deadRidges.Add(new Ridge(start, end));
-
-        mesh.SetVertices(verts);
-        mesh.SetTriangles(tris, 0);
-        mesh.RecalculateNormals();
-        filter.mesh = mesh;
-        coll.sharedMesh = mesh;
     }
 
     public void BuildTriangle(Edge edge, bool freeFloating = false)
     {
         needToFindNextEdge = true;
 
-        Vector3[] posVertices = new Vector3[3]
-            {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
-
-        HexCell[] hexVertices = new HexCell[3] { edge.Start, edge.End, edge.vertex };
-
-        for (int i = 0; i < 3; i++)
+        if (WithinChunk(edge.vertex))
         {
-            if(net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
-            else { verts.Add(posVertices[i]); }
-            tris.Add(tris.Count);
-            //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            Vector3[] posVertices = new Vector3[3]
+                {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
+
+            HexCell[] hexVertices = new HexCell[3] { edge.Start, edge.End, edge.vertex };
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
+                else { verts.Add(posVertices[i]); }
+                tris.Add(tris.Count);
+                //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
+            }
+
+            EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start));
+            EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
+
+            if (!freeFloating)
+                deadRidges.Add(edge.ridge);
+
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            filter.mesh = mesh;
+            coll.sharedMesh = mesh;
         }
-
-        EdgeToBuild(new Edge(edge.End, edge.vertex, edge.Start));
-        EdgeToBuild(new Edge(edge.vertex, edge.Start, edge.End));
-
-        if(!freeFloating)
-            deadRidges.Add(edge.ridge);
-        
-        mesh.SetVertices(verts);
-        mesh.SetTriangles(tris, 0);
-        mesh.RecalculateNormals();
-        filter.mesh = mesh;
-        coll.sharedMesh = mesh;
     }
     #endregion
 
@@ -274,14 +271,15 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    IEnumerable<HexCell> OrganizeNeighbors(List<HexCell> neighborPoints)
+    bool WithinChunk(HexCell hex)
     {
-        //Aided Performance a lot to switch to just GetNoise however GetAdjustedNoise produces better meshes
-        IEnumerable<HexCell> points = neighborPoints.OrderBy(neighbor => Mathf.Abs(GetNoise(neighbor)));
-        return points;
+        bool x = hex.X >= 0 && hex.X < ConstructiveNet.chunkSize;
+        bool y = hex.Y >= 0 && hex.Y < ConstructiveNet.chunkSize;
+        bool z = hex.Z >= 0 && hex.Z < ConstructiveNet.chunkSize;
+        return x && y && z;
     }
 
-    #region Checks
+    #region Legality Checks
     /// <summary>
     /// Checks if the planned face violates any geometric rules
     /// </summary>
@@ -424,11 +422,12 @@ public class CNetChunk : MonoBehaviour
 
     bool Covered(Edge edge)
     {
-        Vector3 normal = GetNormal(edge.vertex).normalized;
-        Ray forwardRay = new Ray(HexToPos(edge.vertex) + normal * 0.5f, normal);
-        Ray backwardRay = new Ray(HexToPos(edge.vertex) - normal * 0.5f, -normal);
-        Ray forwardReverseRay = new Ray(HexToPos(edge.vertex) + normal * 2.5f, -normal);
-        Ray backwardReverseRay = new Ray(HexToPos(edge.vertex) - normal * 2.5f, normal);
+        HexCoord checkPoint = edge.vertex.ToHexCoord();
+        Vector3 normal = GetNormal(checkPoint).normalized;
+        Ray forwardRay = new Ray(HexToPos(checkPoint) + normal * 0.5f, normal);
+        Ray backwardRay = new Ray(HexToPos(checkPoint) - normal * 0.5f, -normal);
+        Ray forwardReverseRay = new Ray(HexToPos(checkPoint) + normal * 2.5f, -normal);
+        Ray backwardReverseRay = new Ray(HexToPos(checkPoint) - normal * 2.5f, normal);
         Debug.DrawRay(forwardReverseRay.origin, 2 * forwardReverseRay.direction, Color.red);
         Debug.DrawRay(backwardReverseRay.origin, 2 * backwardReverseRay.direction, Color.blue);
         return (Physics.Raycast(forwardRay, 2) || Physics.Raycast(backwardRay, 2) || 
@@ -546,9 +545,43 @@ public class CNetChunk : MonoBehaviour
         return output;
     }
 
+    /// <summary>
+    /// Converts from Hex Coordinate to World Position
+    /// </summary>
+    /// <param name="point">Hex Coordinate</param>
+    /// <returns>World Position</returns>
+    public Vector3 HexToPos(HexCoord point)
+    {
+        Vector3 output = new Vector3();
+        output = World.HexToPos(point);
+        output.x += PosOffset.x;
+        output.y += PosOffset.y;
+        output.z += PosOffset.z;
+        return output;
+    }
+
     public HexWorldCoord HexToWorldHex(HexCoord point)
     {
         return HexOffset + point;
+    }
+
+    public static ChunkCoord PosToChunk(Vector3 point)
+    {
+        HexWorldCoord hex = World.PosToHex(point);
+        ChunkCoord output;
+        output.x = Mathf.FloorToInt((hex.x + .5f) / ConstructiveNet.chunkSize);
+        output.y = Mathf.FloorToInt((hex.y + .5f) / ConstructiveNet.chunkSize);
+        output.z = Mathf.FloorToInt((hex.z + .5f) / ConstructiveNet.chunkSize);
+        return output;
+    }
+
+    public static Vector3 ChunkToPos(ChunkCoord chunkCoord)
+    {
+        HexWorldCoord output;
+        output.x = chunkCoord.x * ConstructiveNet.chunkSize;
+        output.y = chunkCoord.y * ConstructiveNet.chunkSize;
+        output.z = chunkCoord.z * ConstructiveNet.chunkSize;
+        return World.HexToPos(output);
     }
     #endregion
 
