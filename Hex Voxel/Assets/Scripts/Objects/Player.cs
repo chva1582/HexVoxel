@@ -1,22 +1,33 @@
 ﻿//Controls for the Player Avatar
 //Assigned to the Player GameObject
+using System.Collections;
 using UnityEngine;
 
-public enum PlayerMovement {Ground, Frozen, Flying };
+public enum PlayerMovement {Grounded, Frozen, Flying };
 
 public class Player : MonoBehaviour
 {
-    #region Instantiation
-    Rigidbody body;
-    public PlayerMovement playerMovement;
+    #region Variables
+    //Components
     public World world;
+    Rigidbody body;
+    Transform cameraTransform;
+
+    //Public Variables
+    public PlayerMovement playerMovement;
     public float rotationalSpeed;
     public float linearSpeed;
+    public float ascensionSpeed;
     public float jumpStrength;
-    bool groundContact;
-    int timer;
 
-    Transform cameraTransform;
+    //Status Booleans
+    bool groundContact;
+    bool jumpReady = true;
+
+    //Mode Properties
+    bool Grounded { get { return playerMovement == PlayerMovement.Grounded; } }
+    bool Frozen { get { return playerMovement == PlayerMovement.Frozen; } }
+    bool Flying { get { return playerMovement == PlayerMovement.Flying; } }
     #endregion
 
     #region Start & Update
@@ -26,40 +37,44 @@ public class Player : MonoBehaviour
         body = gameObject.GetComponent<Rigidbody>();
         cameraTransform = transform.GetChild(0).transform;
         Cursor.lockState = CursorLockMode.Locked;
+        StartCoroutine(DelayedRuleEnforcement());
 	}
 
     // Update is called once per frame
     void Update()
     {
         MovementControl();
-        TimerCheck();
         if (Input.GetButton("Fire1"))
         {
             PointEdit();
         }
 
-        body.useGravity = !(playerMovement == PlayerMovement.Flying);
+        body.useGravity = !Flying;
 
         if (Input.GetKeyDown(KeyCode.P))
             Cursor.lockState = ((Cursor.lockState == CursorLockMode.Locked) ? CursorLockMode.None : CursorLockMode.Locked);
         if(Cursor.lockState == CursorLockMode.Locked)
             CameraRotation();
     }
+    #endregion
 
-    void TimerCheck()
+    #region Coroutines
+    IEnumerator DelayedRuleEnforcement()
     {
-        if (timer == 100)
-        {
-            if (playerMovement == PlayerMovement.Ground)
-                body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-            if (playerMovement == PlayerMovement.Frozen)
-                body.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-            if (playerMovement == PlayerMovement.Flying)
-                body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-            timer++;
-        }
-        else if (timer < 100)
-            timer++;
+        yield return new WaitForSeconds(0.1f);
+        if (playerMovement == PlayerMovement.Grounded)
+            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        if (playerMovement == PlayerMovement.Frozen)
+            body.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        if (playerMovement == PlayerMovement.Flying)
+            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+    }
+
+    IEnumerator HoldForNextJump()
+    {
+        jumpReady = false;
+        yield return new WaitForSeconds(1f);
+        jumpReady = true;
     }
     #endregion
 
@@ -111,18 +126,34 @@ public class Player : MonoBehaviour
 
     void MovementControl()
     {
-        if ((Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) && ((playerMovement == PlayerMovement.Ground) ? groundContact : true))
-            body.AddForce(transform.right * linearSpeed);
-        if ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) && ((playerMovement == PlayerMovement.Ground) ? groundContact : true))
-            body.AddForce(transform.right * -1 * linearSpeed);
-        if ((Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) && ((playerMovement == PlayerMovement.Ground) ? groundContact : true))
-            body.AddForce(transform.forward * linearSpeed);
-        if ((Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) && ((playerMovement == PlayerMovement.Ground) ? groundContact : true))
-            body.AddForce(transform.forward * -1 * linearSpeed);
-        if (Input.GetKey(KeyCode.Space) && ((playerMovement == PlayerMovement.Ground) ? groundContact : true))
-            body.AddForce(transform.up * jumpStrength);
-        if (Input.GetKey(KeyCode.RightShift) && playerMovement == PlayerMovement.Flying)
-            body.AddForce(transform.up * -1 * jumpStrength);
+        int right = ((Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) && (Grounded ? groundContact : true)) ? 1 : 0;
+        int left = ((Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) && (Grounded ? groundContact : true)) ? 1 : 0;
+        int forward = ((Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) && (Grounded ? groundContact : true)) ? 1 : 0;
+        int backward = ((Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) && (Grounded ? groundContact : true)) ? 1 : 0;
+        Move(((right - left) * transform.right + (forward - backward) * transform.forward) * linearSpeed);
+
+        if (Flying)
+        {
+            int up = Input.GetKey(KeyCode.Space) ? 1 : 0;
+            int down = (Input.GetKey(KeyCode.RightShift) || Input.GetKey(KeyCode.LeftShift)) ? 1 : 0;
+            Move((up - down) * transform.up * ascensionSpeed);
+        }
+        else if(Grounded)
+        {
+            if (Input.GetKey(KeyCode.Space) && groundContact && jumpReady)
+                Jump();
+        }
+    }
+
+    void Move(Vector3 dir)
+    {
+        body.AddForce(dir, ForceMode.Impulse);
+    }
+
+    void Jump()
+    {
+        body.AddForce(transform.up * jumpStrength / (Flying ? 20 : 1), ForceMode.Impulse);
+        StartCoroutine(HoldForNextJump());
     }
 
     void CameraRotation()
