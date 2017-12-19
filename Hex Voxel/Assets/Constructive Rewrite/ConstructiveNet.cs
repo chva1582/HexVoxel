@@ -26,7 +26,6 @@ public class ConstructiveNet : MonoBehaviour
 
         CNetChunk initialChunk;
         Ridge initRidge = FindThresholdAlongRay(new Ray(initializationProbe.transform.position, Vector3.down), out initialChunk);
-        //print(initRidge.start);
         initialChunk.ConstructFirstTriangle(initRidge);
     }
 	
@@ -70,12 +69,9 @@ public class ConstructiveNet : MonoBehaviour
                 break;
         }
 
-        print(World.PosToHex(ray.origin + ray.direction * (distance + i)));
-        print(CNetChunk.PosToChunk(ray.origin + ray.direction * (distance + i)));
         chunk = InitializeChunk(CNetChunk.PosToChunk(ray.origin + ray.direction * (distance + i)));
         chunks.Add(chunk);
         HexCoord hitPoint = chunk.PosToHex(ray.origin + ray.direction * (distance + i));
-        print(hitPoint);
         Ridge ridge = new Ridge();
         ridge.start.X = (sbyte)Mathf.FloorToInt(hitPoint.x);
         ridge.start.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);

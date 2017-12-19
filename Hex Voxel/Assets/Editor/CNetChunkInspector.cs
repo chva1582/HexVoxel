@@ -252,7 +252,6 @@ public class CNetChunkInspector : Editor
         }
         mode = DebugMode.SelectedSegment;
         Repaint();
-
     }
 
     void SelectPoint()
@@ -301,15 +300,12 @@ public class CNetChunkInspector : Editor
             showValues = !showValues;
         if (Event.current.keyCode == KeyCode.L)
             showLocations = !showLocations;
-        else if (Event.current.shift)
-        {
-            if (Event.current.keyCode == KeyCode.A)
-                mode = DebugMode.SelectFace;
-            if (Event.current.keyCode == KeyCode.S)
-                mode = DebugMode.SelectSegment;
-            if (Event.current.keyCode == KeyCode.D)
-                mode = DebugMode.SelectPoint;
-        }
+        if (Event.current.keyCode == KeyCode.A)
+            mode = DebugMode.SelectFace;
+        if (Event.current.keyCode == KeyCode.S)
+            mode = DebugMode.SelectSegment;
+        if (Event.current.keyCode == KeyCode.D)
+            mode = DebugMode.SelectPoint;
         if (Event.current.keyCode == KeyCode.N)
             mode = DebugMode.NextEdge;
         if (Event.current.keyCode == KeyCode.M)
@@ -368,60 +364,5 @@ public class CNetChunkInspector : Editor
     {
         Vector3 point = chunk.HexToPos(inspectedPeak.point);
         Gizmos.DrawSphere(point, 0.1f);
-    }
-
-    void LinesFromFace(Facet facet, CNetChunk chunk)
-    {
-        Handles.color = Color.green;
-        Quaternion direction;
-
-        direction = Quaternion.FromToRotation(Vector3.forward, chunk.HexToPos(facet.second) - chunk.HexToPos(facet.first));
-        if (Handles.Button(chunk.HexToPos(facet.first), direction, Vector3.Magnitude(chunk.HexToPos(facet.second) - chunk.HexToPos(facet.first)), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log(facet.first + " and " + facet.second);
-            buttonClickThisFrame = true;
-        }
-
-        direction = Quaternion.FromToRotation(Vector3.forward, chunk.HexToPos(facet.third) - chunk.HexToPos(facet.second));
-        if (Handles.Button(chunk.HexToPos(facet.second), direction, Vector3.Magnitude(chunk.HexToPos(facet.third) - chunk.HexToPos(facet.second)), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log(facet.second + " and " + facet.third);
-            buttonClickThisFrame = true;
-        }
-
-        direction = Quaternion.FromToRotation(Vector3.forward, chunk.HexToPos(facet.first) - chunk.HexToPos(facet.third));
-        if (Handles.Button(chunk.HexToPos(facet.third), direction, Vector3.Magnitude(chunk.HexToPos(facet.first) - chunk.HexToPos(facet.third)), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log(facet.third + " and " + facet.first);
-            buttonClickThisFrame = true;
-        }
-    }
-
-    void LinesFromFace(Vector3 p0, Vector3 p1, Vector3 p2)
-    {
-        Handles.color = Color.green;
-
-        Quaternion direction;
-
-        direction = Quaternion.FromToRotation(Vector3.forward, p1 - p0);
-        if (Handles.Button(p0, direction, Vector3.Magnitude(p1 - p0), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log("First Ridge");
-            buttonClickThisFrame = true;
-        }
-
-        direction = Quaternion.FromToRotation(Vector3.forward, p2 - p1);
-        if (Handles.Button(p1, direction, Vector3.Magnitude(p2 - p1), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log("Second Ridge");
-            buttonClickThisFrame = true;
-        }
-
-        direction = Quaternion.FromToRotation(Vector3.forward, p0 - p2);
-        if (Handles.Button(p2, direction, Vector3.Magnitude(p0 - p2), 3, Handles.ArrowHandleCap))
-        {
-            Debug.Log("Third Ridge");
-            buttonClickThisFrame = true;
-        }
     }
 }

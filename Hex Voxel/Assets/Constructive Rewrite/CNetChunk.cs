@@ -1,6 +1,7 @@
 ﻿//A group of points of square size organized in octahedral coordinates
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -144,6 +145,9 @@ public class CNetChunk : MonoBehaviour
                     neighborPoints.Remove(point);
             }
         }
+        catch(ArgumentOutOfRangeException e)        {
+            UnbuildTriangle(NextEdge);
+        }
         finally
         {
             if(net.continueOnProblem)
@@ -200,7 +204,6 @@ public class CNetChunk : MonoBehaviour
             {
                 if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
                 else { verts.Add(posVertices[i]); }
-                tris.Add(tris.Count);
                 //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
             }
 
@@ -210,11 +213,7 @@ public class CNetChunk : MonoBehaviour
             if (!freeFloating)
                 deadRidges.Add(new Ridge(start, end));
 
-            mesh.SetVertices(verts);
-            mesh.SetTriangles(tris, 0);
-            mesh.RecalculateNormals();
-            filter.mesh = mesh;
-            coll.sharedMesh = mesh;
+            MeshCalculate();
         }
     }
 
@@ -233,7 +232,6 @@ public class CNetChunk : MonoBehaviour
             {
                 if (net.smoothMesh) { verts.Add(posVertices[i] + GetSmoothFactor(hexVertices[i])); }
                 else { verts.Add(posVertices[i]); }
-                tris.Add(tris.Count);
                 //normals.Add(Vector3.Cross(posVertices[1] - posVertices[0], posVertices[2] - posVertices[0]));
             }
 
@@ -243,12 +241,104 @@ public class CNetChunk : MonoBehaviour
             if (!freeFloating)
                 deadRidges.Add(edge.ridge);
 
+            MeshCalculate();
+        }
+    }
+
+    public void UnbuildTriangle(Edge edge)
+    {
+        List<Vector3> checkVertices = new List<Vector3>() { HexToPos(edge.Start), HexToPos(edge.End), HexToPos(edge.vertex) };
+        for (int i = 1; i < verts.Count; i++)
+        {
+            if (checkVertices.Contains(verts[verts.Count-i]))
+            {
+                checkVertices.Remove(verts[verts.Count - i]);
+                if(checkVertices.Contains(verts[verts.Count-i-1]))
+                {
+                    checkVertices.Remove(verts[verts.Count - i - 1]);
+                    if(checkVertices.Contains(verts[verts.Count - i - 2]))
+                    {
+                        Ridge startRidge = new Ridge(edge.Start, edge.vertex);
+                        Ridge endRidge = new Ridge(edge.End, edge.vertex);
+
+                        if (LiveNeighbor(startRidge))
+                            liveRidges.Remove(startRidge);
+                        if (LiveNeighbor(endRidge))
+                            liveRidges.Remove(endRidge);
+
+                        if (DeadNeighbor(startRidge))
+                        {
+                            deadRidges.Remove(startRidge);
+                            liveRidges.Add(startRidge);
+                            
+                        }
+                        if (DeadNeighbor(endRidge))
+                        {
+                            deadRidges.Remove(endRidge);
+                            liveRidges.Add(endRidge);
+                        }
+
+                        verts.RemoveAt(verts.Count - i);
+                        verts.RemoveAt(verts.Count - i - 1);
+                        verts.RemoveAt(verts.Count - i - 2);
+
+                        MeshCalculate(true);
+                    }
+                }
+                checkVertices = new List<Vector3>() { HexToPos(edge.Start), HexToPos(edge.End), HexToPos(edge.vertex) };
+            }
+        }
+    }
+
+    //HexCell FindOldVert(Ridge ridge)
+    //{
+    //    List<HexCell> neighborPoints = ridge.FindNeighborPoints();
+    //    foreach (var point in neighborPoints)
+    //    {
+    //        if (DeadNeighbor(new Ridge(ridge.start, point)) && DeadNeighbor(new Ridge(ridge.end, point)))
+    //            return point;
+    //    }
+
+    //    foreach (var point in neighborPoints)
+    //    {
+    //        List<Vector3> checkVertices = new List<Vector3>() { HexToPos(ridge.start), HexToPos(ridge.end), HexToPos(point) };
+    //        for (int i = 1; i < verts.Count; i++)
+    //        {
+    //            if (checkVertices.Contains(verts[verts.Count - i]))
+    //            {
+    //                checkVertices.Remove(verts[verts.Count - i]);
+    //                if (checkVertices.Contains(verts[verts.Count - i - 1]))
+    //                {
+    //                    checkVertices.Remove(verts[verts.Count - i - 1]);
+    //                    if (checkVertices.Contains(verts[verts.Count - i - 2]))
+    //                    {
+
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
+    void MeshCalculate(bool remove = false)
+    {
+        tris.Clear();
+        for (int i = 0; i < verts.Count; i++)
+            tris.Add(i);
+
+        if (remove)
+        {
+            mesh.SetTriangles(tris, 0);
+            mesh.SetVertices(verts);
+        }
+        else
+        {
             mesh.SetVertices(verts);
             mesh.SetTriangles(tris, 0);
-            mesh.RecalculateNormals();
-            filter.mesh = mesh;
-            coll.sharedMesh = mesh;
         }
+        mesh.RecalculateNormals();
+        filter.mesh = mesh;
+        coll.sharedMesh = mesh;
     }
     #endregion
 
