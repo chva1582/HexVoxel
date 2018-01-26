@@ -1,4 +1,6 @@
-﻿using System;
+﻿//The overarching GameObject that holds world settings
+//Applied to the World Object
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -424,18 +426,18 @@ public class World : MonoBehaviour
     {
         HexWorldCoord hex = PosToHex(point);
         ChunkCoord output;
-        output.x = Mathf.FloorToInt((hex.x + .5f) / Chunk.chunkSize);
-        output.y = Mathf.FloorToInt((hex.y + .5f) / Chunk.chunkSize);
-        output.z = Mathf.FloorToInt((hex.z + .5f) / Chunk.chunkSize);
+        output.x = Mathf.FloorToInt((hex.x + .5f) / ConstructiveNet.chunkSize);
+        output.y = Mathf.FloorToInt((hex.y + .5f) / ConstructiveNet.chunkSize);
+        output.z = Mathf.FloorToInt((hex.z + .5f) / ConstructiveNet.chunkSize);
         return output;
     }
 
     public static Vector3 ChunkToPos(ChunkCoord chunkCoord)
     {
         HexWorldCoord output;
-        output.x = chunkCoord.x * Chunk.chunkSize;
-        output.y = chunkCoord.y * Chunk.chunkSize;
-        output.z = chunkCoord.z * Chunk.chunkSize;
+        output.x = chunkCoord.x * ConstructiveNet.chunkSize;
+        output.y = chunkCoord.y * ConstructiveNet.chunkSize;
+        output.z = chunkCoord.z * ConstructiveNet.chunkSize;
         //output += new HexWorldCoord(1,1,1);
         return HexToPos(output);
     }

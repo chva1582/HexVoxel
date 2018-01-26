@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿//Collection of CNetChunks that combine to form an entire object
+//Applied to the ConstructiveNet Object
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ConstructiveNet : MonoBehaviour
 {
-    public static int chunkSize = 64;
+    public static int chunkSize = 16;
 
     public World world;
     public GameObject ChunkObject;
@@ -62,16 +64,21 @@ public class ConstructiveNet : MonoBehaviour
             if (largeSteps == 19)
                 Debug.LogError("Initial Ray Search could not find ground");
         }
+        Vector3 realPoint = new Vector3();
         for (i = 0; i < 10; i++)
         {
-            value = world.GetNoise(World.PosToHex(ray.origin + ray.direction * (distance + i)));
+            realPoint = ray.origin + ray.direction * (distance + i);
+            value = world.GetNoise(World.PosToHex(realPoint));
             if (value < 0)
                 break;
         }
 
-        chunk = InitializeChunk(CNetChunk.PosToChunk(ray.origin + ray.direction * (distance + i)));
+        chunk = InitializeChunk(CNetChunk.PosToChunk(realPoint));
         chunks.Add(chunk);
-        HexCoord hitPoint = chunk.PosToHex(ray.origin + ray.direction * (distance + i));
+        HexCoord hitPoint = chunk.PosToHex(realPoint);
+        print(realPoint);
+        print("Hex Coordinates: " + World.PosToHex(realPoint));
+        print("Chunk Coordinates: " + CNetChunk.PosToChunk(realPoint));
         Ridge ridge = new Ridge();
         ridge.start.X = (sbyte)Mathf.FloorToInt(hitPoint.x);
         ridge.start.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);

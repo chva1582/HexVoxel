@@ -1,11 +1,13 @@
-﻿using System.Collections.Generic;
+﻿//Inspector for debugging the CNetChunk Object within the scene inspector
+//Held in the Editor Folder
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
 [CustomEditor(typeof(CNetChunk))]
 public class CNetChunkInspector : Editor
 {
-    enum DebugMode { None, SelectFace, SelectedFace, SelectSegment, SelectedSegment, SelectPoint, SelectedPoint, NextEdge, AllMesh};
+    enum DebugMode { None, SelectFace, SelectedFace, SelectSegment, SelectedSegment, SelectPoint, SelectedPoint, NextEdge, AllMesh, ChunkBounds};
 
     CNetChunk chunk;
 
@@ -58,6 +60,8 @@ public class CNetChunkInspector : Editor
             NextEdge();
         else if (mode == DebugMode.AllMesh)
             AllMesh();
+        else if (mode == DebugMode.ChunkBounds)
+            ChunkBounds();
 
         bool selectedMode = (mode == DebugMode.SelectedFace || mode == DebugMode.SelectedSegment || mode == DebugMode.SelectedPoint);
         if (selectedMode)
@@ -159,6 +163,26 @@ public class CNetChunkInspector : Editor
             }
             Handles.Label(chunk.HexToPos(displayPoints[i]), outString);
         }
+    }
+
+    void ChunkBounds()
+    {
+        Vector3 basePoint = World.ChunkToPos(chunk.chunkCoords);
+        int size = ConstructiveNet.chunkSize;
+        Debug.Log(World.PosToHex(basePoint + World.HexToPos(new HexWorldCoord(size, size, size))));
+        Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(size, 0, 0)));
+        Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(0, size, 0)));
+        Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(0, 0, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(size, 0, 0)), basePoint + World.HexToPos(new HexWorldCoord(size, size, 0)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(size, 0, 0)), basePoint + World.HexToPos(new HexWorldCoord(size, 0, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(0, size, 0)), basePoint + World.HexToPos(new HexWorldCoord(size, size, 0)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(0, size, 0)), basePoint + World.HexToPos(new HexWorldCoord(0, size, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(0, 0, size)), basePoint + World.HexToPos(new HexWorldCoord(size, 0, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(0, 0, size)), basePoint + World.HexToPos(new HexWorldCoord(0, size, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(size, size, 0)), basePoint + World.HexToPos(new HexWorldCoord(size, size, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(size, 0, size)), basePoint + World.HexToPos(new HexWorldCoord(size, size, size)));
+        Handles.DrawLine(basePoint + World.HexToPos(new HexWorldCoord(0, size, size)), basePoint + World.HexToPos(new HexWorldCoord(size, size, size)));
+
     }
 
     void DisplayInfo(List<Vector3> displayPoints)
@@ -310,6 +334,8 @@ public class CNetChunkInspector : Editor
             mode = DebugMode.NextEdge;
         if (Event.current.keyCode == KeyCode.M)
             mode = DebugMode.AllMesh;
+        if (Event.current.keyCode == KeyCode.B)
+            mode = DebugMode.ChunkBounds;
         Repaint();
     }
 

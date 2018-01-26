@@ -1,4 +1,6 @@
 ﻿//A group of points of square size organized in octahedral coordinates
+//Also includes the mesh that connects those points
+//Applied to the CNetChunk Prefab
 using UnityEngine;
 using System.Collections.Generic;
 using System;
@@ -33,7 +35,7 @@ public class CNetChunk : MonoBehaviour
     bool ctrl;
 
     //Net Storage Variables
-    public Queue<Edge> facesToBuild = new Queue<Edge>();
+    public Queue<Edge> edgesToBuild = new Queue<Edge>();
     HashSet<Ridge> deadRidges = new HashSet<Ridge>();
     HashSet<Ridge> liveRidges = new HashSet<Ridge>();
     Edge nextEdge;
@@ -42,6 +44,7 @@ public class CNetChunk : MonoBehaviour
     //Properties
     public HexWorldCoord HexOffset { get { return World.PosToHex(ChunkToPos(chunkCoords)); } }
     public Vector3 PosOffset { get { return ChunkToPos(chunkCoords); } }
+
     
     public Edge NextEdge
     {
@@ -51,7 +54,7 @@ public class CNetChunk : MonoBehaviour
             {
                 do
                 {
-                    nextEdge = facesToBuild.Dequeue();
+                    nextEdge = edgesToBuild.Dequeue();
                 } while (!liveRidges.Contains(nextEdge.ridge));
                 liveRidges.Remove(nextEdge.ridge);
                 needToFindNextEdge = false;
@@ -80,6 +83,9 @@ public class CNetChunk : MonoBehaviour
             ConstructFromForcedNeighbor();
         }
     }
+
+    //Info
+    int unbuiltTriangles = 0;
     #endregion
 
     #region Start & Update
@@ -93,7 +99,7 @@ public class CNetChunk : MonoBehaviour
 
     void Update()
     {
-        if ((Input.GetKeyUp(KeyCode.Return) || net.autoGrow) && facesToBuild.Count != 0)
+        if ((Input.GetKeyUp(KeyCode.Return) || net.autoGrow) && edgesToBuild.Count != 0)
         {
             for (int i = 0; i < (rightShift ? 100 : (leftShift ? 10 : 1)); i++)
                 ConstructFromNextEdge();
@@ -112,7 +118,8 @@ public class CNetChunk : MonoBehaviour
         normals.Clear();
         deadRidges.Clear();
         liveRidges.Clear();
-        facesToBuild.Clear();
+        edgesToBuild.Clear();
+        int destroyedFaces = 0;
     }
     #endregion
 
@@ -145,7 +152,8 @@ public class CNetChunk : MonoBehaviour
                     neighborPoints.Remove(point);
             }
         }
-        catch(ArgumentOutOfRangeException e)        {
+        catch(ArgumentOutOfRangeException e)
+        {
             UnbuildTriangle(NextEdge);
         }
         finally
@@ -247,6 +255,7 @@ public class CNetChunk : MonoBehaviour
 
     public void UnbuildTriangle(Edge edge)
     {
+        unbuiltTriangles++;
         List<Vector3> checkVertices = new List<Vector3>() { HexToPos(edge.Start), HexToPos(edge.End), HexToPos(edge.vertex) };
         for (int i = 1; i < verts.Count; i++)
         {
@@ -262,20 +271,25 @@ public class CNetChunk : MonoBehaviour
                         Ridge endRidge = new Ridge(edge.End, edge.vertex);
 
                         if (LiveNeighbor(startRidge))
+                        {
                             liveRidges.Remove(startRidge);
+                        }
                         if (LiveNeighbor(endRidge))
+                        {
                             liveRidges.Remove(endRidge);
+                        }
 
                         if (DeadNeighbor(startRidge))
                         {
                             deadRidges.Remove(startRidge);
                             liveRidges.Add(startRidge);
-                            
+                            edgesToBuild.Enqueue(new Edge(startRidge, edge.End));
                         }
                         if (DeadNeighbor(endRidge))
                         {
                             deadRidges.Remove(endRidge);
                             liveRidges.Add(endRidge);
+                            edgesToBuild.Enqueue(new Edge(endRidge, edge.Start));
                         }
 
                         verts.RemoveAt(verts.Count - i);
@@ -346,7 +360,7 @@ public class CNetChunk : MonoBehaviour
     {
         if (!LiveNeighbor(edge.ridge))
         {
-            facesToBuild.Enqueue(edge);
+            edgesToBuild.Enqueue(edge);
             liveRidges.Add(edge.ridge);
             //print("Added Live Edge: Start " + edge.ridge.start + ", End " + edge.ridge.end);
             //print(edge.ridge.Type.ToString() + ", " + edge.ridge.Direction + " :" + edge.ridge.start);
