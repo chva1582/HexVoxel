@@ -169,7 +169,6 @@ public class CNetChunkInspector : Editor
     {
         Vector3 basePoint = World.ChunkToPos(chunk.chunkCoords);
         int size = ConstructiveNet.chunkSize;
-        Debug.Log(World.PosToHex(basePoint + World.HexToPos(new HexWorldCoord(size, size, size))));
         Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(size, 0, 0)));
         Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(0, size, 0)));
         Handles.DrawLine(basePoint, basePoint + World.HexToPos(new HexWorldCoord(0, 0, size)));
@@ -337,6 +336,26 @@ public class CNetChunkInspector : Editor
         if (Event.current.keyCode == KeyCode.B)
             mode = DebugMode.ChunkBounds;
         Repaint();
+
+        if (Event.current.keyCode == KeyCode.Return)
+        {
+            for (int i = 0; i < ((Event.current.shift) ? 10 : 1); i++)
+                chunk.ConstructFromNextEdge();
+        }
+
+        if(Event.current.keyCode == KeyCode.O)
+        {
+            Debug.Log(chunk.liveRidges.Count);
+            foreach (var liveRidge in chunk.liveRidges)
+            {
+                Debug.Log(liveRidge.start + " - " + liveRidge.end);
+            }
+        }
+
+        if (Event.current.keyCode == KeyCode.P)
+        {
+            chunk.UnbuildTriangle((chunk.verts.Count / 3) - 1, true);
+        }
     }
 
     [DrawGizmo(GizmoType.Selected | GizmoType.Active)]

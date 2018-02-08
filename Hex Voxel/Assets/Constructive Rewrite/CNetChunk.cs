@@ -36,25 +36,33 @@ public class CNetChunk : MonoBehaviour
 
     //Net Storage Variables
     public Queue<Edge> edgesToBuild = new Queue<Edge>();
+    public Stack<Edge> undoneEdgesToBuild = new Stack<Edge>();
     HashSet<Ridge> deadRidges = new HashSet<Ridge>();
-    HashSet<Ridge> liveRidges = new HashSet<Ridge>();
+    public HashSet<Ridge> liveRidges = new HashSet<Ridge>();
     Edge nextEdge;
     bool needToFindNextEdge;
 
     //Properties
     public HexWorldCoord HexOffset { get { return World.PosToHex(ChunkToPos(chunkCoords)); } }
     public Vector3 PosOffset { get { return ChunkToPos(chunkCoords); } }
-
+    int FaceCount { get { return verts.Count / 3; } }
     
+    //Next Properties
     public Edge NextEdge
     {
         get
         {
-            if(needToFindNextEdge)
+            if (needToFindNextEdge)
             {
                 do
                 {
-                    nextEdge = edgesToBuild.Dequeue();
+                    Edge edge;
+                    if (undoneEdgesToBuild.Count > 0)
+                        edge = undoneEdgesToBuild.Pop();
+                    else
+                        edge = edgesToBuild.Dequeue();
+                    nextEdge = edge;
+                    edge = new Edge();
                 } while (!liveRidges.Contains(nextEdge.ridge));
                 liveRidges.Remove(nextEdge.ridge);
                 needToFindNextEdge = false;
@@ -84,6 +92,9 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
+    //Temp Debug Variables
+    bool recursionOccured;
+
     //Info
     int unbuiltTriangles = 0;
     #endregion
@@ -99,9 +110,9 @@ public class CNetChunk : MonoBehaviour
 
     void Update()
     {
-        if ((Input.GetKeyUp(KeyCode.Return) || net.autoGrow) && edgesToBuild.Count != 0)
+        if (net.autoGrow && edgesToBuild.Count != 0)
         {
-            for (int i = 0; i < (rightShift ? 100 : (leftShift ? 10 : 1)); i++)
+            for (int i = 0; i < (rightShift ? 10 : 1); i++)
                 ConstructFromNextEdge();
         }
 
@@ -154,6 +165,8 @@ public class CNetChunk : MonoBehaviour
         }
         catch(ArgumentOutOfRangeException e)
         {
+            print("Recursion occured in mesh");
+            recursionOccured = true;
             UnbuildTriangle(NextEdge);
         }
         finally
@@ -201,7 +214,7 @@ public class CNetChunk : MonoBehaviour
     {
         needToFindNextEdge = true;
 
-        if (WithinChunk(origin))
+        if (WithinChunk(origin) || !net.constrainToChunk)
         {
             Vector3[] posVertices = new Vector3[3]
                 {World.HexToPos(start.ToHexCoord()), World.HexToPos(end.ToHexCoord()), World.HexToPos(origin.ToHexCoord())};
@@ -229,7 +242,7 @@ public class CNetChunk : MonoBehaviour
     {
         needToFindNextEdge = true;
 
-        if (WithinChunk(edge.vertex))
+        if (WithinChunk(edge.vertex) || !net.constrainToChunk)
         {
             Vector3[] posVertices = new Vector3[3]
                 {World.HexToPos(edge.Start.ToHexCoord()), World.HexToPos(edge.End.ToHexCoord()), World.HexToPos(edge.vertex.ToHexCoord())};
@@ -253,86 +266,280 @@ public class CNetChunk : MonoBehaviour
         }
     }
 
-    public void UnbuildTriangle(Edge edge)
+    /// <summary>
+    /// Removes a triangle from the chunk's mesh
+    /// </summary>
+    /// <param name="edge">Edge of the facet to be removed</param>
+    public void UnbuildTriangle(Edge edge, bool isUndo = false)
     {
-        unbuiltTriangles++;
-        List<Vector3> checkVertices = new List<Vector3>() { HexToPos(edge.Start), HexToPos(edge.End), HexToPos(edge.vertex) };
-        for (int i = 1; i < verts.Count; i++)
+        HexCell otherVert = new HexCell();
+        int faceIndex = -1;
+        if (FindOtherVert(edge.ridge, ref otherVert, ref faceIndex))
         {
-            if (checkVertices.Contains(verts[verts.Count-i]))
+            Ridge startRidge = new Ridge(edge.Start, otherVert);
+            Ridge endRidge = new Ridge(edge.End, otherVert);
+
+            //print("OG: " + edge.Start + " - " + edge.End);
+            //foreach (var liveRidge in liveRidges)
+            //{
+            //    print(liveRidge.start + " - " + liveRidge.end);
+            //}
+
+            liveRidges.Remove(edge.ridge);
+            if (LiveNeighbor(startRidge))
             {
-                checkVertices.Remove(verts[verts.Count - i]);
-                if(checkVertices.Contains(verts[verts.Count-i-1]))
-                {
-                    checkVertices.Remove(verts[verts.Count - i - 1]);
-                    if(checkVertices.Contains(verts[verts.Count - i - 2]))
-                    {
-                        Ridge startRidge = new Ridge(edge.Start, edge.vertex);
-                        Ridge endRidge = new Ridge(edge.End, edge.vertex);
-
-                        if (LiveNeighbor(startRidge))
-                        {
-                            liveRidges.Remove(startRidge);
-                        }
-                        if (LiveNeighbor(endRidge))
-                        {
-                            liveRidges.Remove(endRidge);
-                        }
-
-                        if (DeadNeighbor(startRidge))
-                        {
-                            deadRidges.Remove(startRidge);
-                            liveRidges.Add(startRidge);
-                            edgesToBuild.Enqueue(new Edge(startRidge, edge.End));
-                        }
-                        if (DeadNeighbor(endRidge))
-                        {
-                            deadRidges.Remove(endRidge);
-                            liveRidges.Add(endRidge);
-                            edgesToBuild.Enqueue(new Edge(endRidge, edge.Start));
-                        }
-
-                        verts.RemoveAt(verts.Count - i);
-                        verts.RemoveAt(verts.Count - i - 1);
-                        verts.RemoveAt(verts.Count - i - 2);
-
-                        MeshCalculate(true);
-                    }
-                }
-                checkVertices = new List<Vector3>() { HexToPos(edge.Start), HexToPos(edge.End), HexToPos(edge.vertex) };
+                liveRidges.Remove(startRidge);
             }
+            if (LiveNeighbor(endRidge))
+            {
+                liveRidges.Remove(endRidge);
+            }
+
+            if (DeadNeighbor(startRidge))
+            {
+                deadRidges.Remove(startRidge);
+                liveRidges.Add(startRidge);
+                QueueUpEdge(new Edge(startRidge, edge.End), isUndo);
+            }
+            if (DeadNeighbor(endRidge))
+            {
+                deadRidges.Remove(endRidge);
+                liveRidges.Add(endRidge);
+                QueueUpEdge(new Edge(endRidge, edge.Start), isUndo);
+            }
+
+            verts.RemoveAt(3 * faceIndex + 2);
+            verts.RemoveAt(3 * faceIndex + 1);
+            verts.RemoveAt(3 * faceIndex);
+
+            MeshCalculate(true);
+        }
+        if(!isUndo)
+            needToFindNextEdge = true;
+    }
+
+    /// <summary>
+    /// Removes a triangle from the chunk's mesh
+    /// </summary>
+    /// <param name="ridge">Ridge to remove a specific triangle from</param>
+    public void UnbuildTriangle(Ridge ridge, bool isUndo = false)
+    {
+        HexCell otherVert = new HexCell();
+        int faceIndex = -1;
+        if(FindOtherVert(ridge, ref otherVert, ref faceIndex))
+        {
+            Ridge startRidge = new Ridge(ridge.start, otherVert);
+            Ridge endRidge = new Ridge(ridge.end, otherVert);
+
+            //print("OG: " + ridge.start + " - " + ridge.end);
+            foreach (var liveRidge in liveRidges)
+            {
+                print(liveRidge.start + " - " + liveRidge.end);
+            }
+
+            liveRidges.Remove(ridge);
+            if (LiveNeighbor(startRidge))
+            {
+                liveRidges.Remove(startRidge);
+            }
+            if (LiveNeighbor(endRidge))
+            {
+                liveRidges.Remove(endRidge);
+            }
+
+            if (DeadNeighbor(startRidge))
+            {
+                deadRidges.Remove(startRidge);
+                liveRidges.Add(startRidge);
+                QueueUpEdge(new Edge(startRidge, ridge.end), isUndo);
+            }
+            if (DeadNeighbor(endRidge))
+            {
+                deadRidges.Remove(endRidge);
+                liveRidges.Add(endRidge);
+                QueueUpEdge(new Edge(endRidge, ridge.start), isUndo);
+            }
+
+            verts.RemoveAt(3 * faceIndex + 2);
+            verts.RemoveAt(3 * faceIndex + 1);
+            verts.RemoveAt(3 * faceIndex);
+
+            MeshCalculate(true);
+        }
+        if(!isUndo)
+            needToFindNextEdge = true;
+    }
+
+    /// <summary>
+    /// Removes a triangle from the chunk's mesh
+    /// </summary>
+    /// <param name="index">Saved index of the triangle</param>
+    public void UnbuildTriangle(int index, bool isUndo = false)
+    {
+        Vector3 v1 = verts[3 * index];
+        Vector3 v2 = verts[3 * index + 1];
+        Vector3 v3 = verts[3 * index + 2];
+
+        HexCell p1 = World.PosToHex(v1).ToHexCoord().ToHexCell();
+        HexCell p2 = World.PosToHex(v2).ToHexCoord().ToHexCell();
+        HexCell p3 = World.PosToHex(v3).ToHexCoord().ToHexCell();
+
+        Ridge r1 = new Ridge(p1, p2);
+        Ridge r2 = new Ridge(p2, p3);
+        Ridge r3 = new Ridge(p3, p1);
+
+        if (LiveNeighbor(r1))
+        {
+            liveRidges.Remove(r1);
+        }
+        if (LiveNeighbor(r2))
+        {
+            liveRidges.Remove(r2);
+        }
+        if (LiveNeighbor(r3))
+        {
+            liveRidges.Remove(r3);
+        }
+
+        if (DeadNeighbor(r1))
+        {
+            deadRidges.Remove(r1);
+            liveRidges.Add(r1);
+            QueueUpEdge(r1.ReversedRidge, isUndo);
+        }
+        if (DeadNeighbor(r2))
+        {
+            deadRidges.Remove(r2);
+            liveRidges.Add(r2);
+            QueueUpEdge(r2.ReversedRidge, isUndo);
+        }
+        if (DeadNeighbor(r3))
+        {
+            deadRidges.Remove(r3);
+            liveRidges.Add(r3);
+            QueueUpEdge(r3.ReversedRidge, isUndo);
+        }
+
+        for (int i = 0; i < 3; i++)
+            verts.RemoveAt(3 * index);
+
+        MeshCalculate(true);
+
+        if(!isUndo)
+            needToFindNextEdge = true;
+    }
+
+    /// <summary>
+    /// Add edge to a quick calculate stack
+    /// </summary>
+    /// <param name="edge">Edge to be added</param>
+    /// <param name="isUndo">Is this edge an undo</param>
+    void QueueUpEdge(Edge edge, bool isUndo = false)
+    {
+        if (isUndo)
+            undoneEdgesToBuild.Push(edge);
+        else
+            edgesToBuild.Enqueue(edge);
+    }
+
+    /// <summary>
+    /// Add edge to a quick calculate stack
+    /// </summary>
+    /// <param name="ridge">Ridge of the edge to be added</param>
+    /// <param name="isUndo">Is this edge an undo</param>
+    void QueueUpEdge(Ridge ridge, bool isUndo = false)
+    {
+        HexCell vertex = new HexCell();
+        if (FindOtherVert(ridge, ref vertex))
+        {
+            Edge edge = new Edge(ridge, vertex);
+            if (isUndo)
+                undoneEdgesToBuild.Push(edge);
+            else
+                edgesToBuild.Enqueue(edge);
         }
     }
 
-    //HexCell FindOldVert(Ridge ridge)
-    //{
-    //    List<HexCell> neighborPoints = ridge.FindNeighborPoints();
-    //    foreach (var point in neighborPoints)
-    //    {
-    //        if (DeadNeighbor(new Ridge(ridge.start, point)) && DeadNeighbor(new Ridge(ridge.end, point)))
-    //            return point;
-    //    }
+    /// <summary>
+    /// Finds the third vertex on a face in the mesh
+    /// </summary>
+    /// <param name="ridge">Ridge of the two already known vertices</param>
+    /// <param name="cell">Output of the found vertex</param>
+    /// <param name="faceIndex">Index of the face in the mesh</param>
+    /// <returns>Has the face been found</returns>
+    bool FindOtherVert(Ridge ridge, ref HexCell cell, ref int faceIndex)
+    {
+        List<HexCell> neighborPoints = ridge.FindNeighborPoints();
+        
+        for (int i = 0; i < FaceCount; i++)
+        {
+            List<HexCell> cornersOfFace = GetVerticesFromIndex(i);
+            for (int j = 0; j < 3; j++)
+            {
+                if (cornersOfFace[j] == ridge.start)
+                {
+                    //if (recursionOccured)
+                    //    print("Yeah");
+                    cornersOfFace.Remove(cornersOfFace[j]);
+                    for (int k = 0; k < 2; k++)
+                    {
+                        if (cornersOfFace[k] == ridge.end)
+                        {
+                            cornersOfFace.Remove(cornersOfFace[k]);
+                            cell = cornersOfFace[0];
+                            faceIndex = i;
+                            return true;
+                        }
+                    }
+                    cornersOfFace = GetVerticesFromIndex(i);
+                }
+            }
+        }
+        return false;
+    }
 
-    //    foreach (var point in neighborPoints)
-    //    {
-    //        List<Vector3> checkVertices = new List<Vector3>() { HexToPos(ridge.start), HexToPos(ridge.end), HexToPos(point) };
-    //        for (int i = 1; i < verts.Count; i++)
-    //        {
-    //            if (checkVertices.Contains(verts[verts.Count - i]))
-    //            {
-    //                checkVertices.Remove(verts[verts.Count - i]);
-    //                if (checkVertices.Contains(verts[verts.Count - i - 1]))
-    //                {
-    //                    checkVertices.Remove(verts[verts.Count - i - 1]);
-    //                    if (checkVertices.Contains(verts[verts.Count - i - 2]))
-    //                    {
+    /// <summary>
+    /// Finds the third vertex on a face in the mesh
+    /// </summary>
+    /// <param name="ridge">Ridge of the two already known vertices</param>
+    /// <param name="cell">Output of the found vertex</param>
+    /// <returns>Has the face been found</returns>
+    bool FindOtherVert(Ridge ridge, ref HexCell cell)
+    {
+        List<HexCell> neighborPoints = ridge.FindNeighborPoints();
 
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
+        for (int i = 0; i < FaceCount; i++)
+        {
+            List<HexCell> cornersOfFace = GetVerticesFromIndex(i);
+            if (cornersOfFace.Count != 3)
+                print("Without Index: " + cornersOfFace.Count);
+            for (int j = 0; j < 3; j++)
+            {
+                if (cornersOfFace[j] == ridge.start)
+                {
+                    cornersOfFace.Remove(cornersOfFace[j]);
+                    for (int k = 0; k < 2; k++)
+                    {
+                        if (cornersOfFace[k] == ridge.end)
+                        {
+                            cornersOfFace.Remove(cornersOfFace[k]);
+                            cell = cornersOfFace[0];
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    List<HexCell> GetVerticesFromIndex(int index)
+    {
+        List<HexCell> output = new List<HexCell>();
+        for (int i = 0; i < 3; i++)
+            output.Add(World.PosToHex(verts[3 * index + i]).ToHexCoord().ToHexCell());
+        return output;
+    }
 
     void MeshCalculate(bool remove = false)
     {
@@ -360,7 +567,7 @@ public class CNetChunk : MonoBehaviour
     {
         if (!LiveNeighbor(edge.ridge))
         {
-            edgesToBuild.Enqueue(edge);
+            QueueUpEdge(edge);
             liveRidges.Add(edge.ridge);
             //print("Added Live Edge: Start " + edge.ridge.start + ", End " + edge.ridge.end);
             //print(edge.ridge.Type.ToString() + ", " + edge.ridge.Direction + " :" + edge.ridge.start);

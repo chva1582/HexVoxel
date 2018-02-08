@@ -13,6 +13,7 @@ public class ConstructiveNet : MonoBehaviour
     List<CNetChunk> chunks = new List<CNetChunk>();
 
     public bool autoGrow;
+    public bool constrainToChunk;
     public bool showNextEdge;
     public bool smoothMesh;
     public bool continueOnProblem;
@@ -76,9 +77,9 @@ public class ConstructiveNet : MonoBehaviour
         chunk = InitializeChunk(CNetChunk.PosToChunk(realPoint));
         chunks.Add(chunk);
         HexCoord hitPoint = chunk.PosToHex(realPoint);
-        print(realPoint);
-        print("Hex Coordinates: " + World.PosToHex(realPoint));
-        print("Chunk Coordinates: " + CNetChunk.PosToChunk(realPoint));
+        //print(realPoint);
+        //print("Hex Coordinates: " + World.PosToHex(realPoint));
+        //print("Chunk Coordinates: " + CNetChunk.PosToChunk(realPoint));
         Ridge ridge = new Ridge();
         ridge.start.X = (sbyte)Mathf.FloorToInt(hitPoint.x);
         ridge.start.Y = (sbyte)Mathf.RoundToInt(hitPoint.y);
