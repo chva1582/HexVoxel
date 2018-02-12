@@ -4,6 +4,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using UnityEngine.Profiling;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -138,9 +139,9 @@ public class CNetChunk : MonoBehaviour
     public void ConstructFromNextEdge()
     {
         List<HexCell> neighborPoints = NextEdge.FindNeighborPoints();
-
         try
         {
+            Profiler.BeginSample("Build");
             for (int i = 0; i < 8; i++)
             {
                 HexCell point = neighborPoints[0];
@@ -162,12 +163,15 @@ public class CNetChunk : MonoBehaviour
                 else
                     neighborPoints.Remove(point);
             }
+            Profiler.EndSample();
         }
         catch(ArgumentOutOfRangeException e)
         {
-            print("Recursion occured in mesh");
+            Profiler.BeginSample("Deconstruct");
+            //print("Recursion occured in mesh");
             recursionOccured = true;
             UnbuildTriangle(NextEdge);
+            Profiler.EndSample();
         }
         finally
         {
@@ -527,6 +531,7 @@ public class CNetChunk : MonoBehaviour
                             return true;
                         }
                     }
+                    cornersOfFace = GetVerticesFromIndex(i);
                 }
             }
         }
